@@ -15,6 +15,7 @@ public class Ventana extends JFrame {
     private Renderizador renderizador;
     private JLabel tituloVentana;
     private MenuSimple menu;
+    private ClienteHTTP clienteHTTP;
 
     private JPanel panelSuperior;
     private JPanel barraTitulo;
@@ -56,6 +57,7 @@ public class Ventana extends JFrame {
         setLocationRelativeTo(null);
 
         renderizador = new Renderizador();
+        clienteHTTP = new ClienteHTTP();
         pestanasPorUrl = new HashMap<>();
         etiquetasPestanas = new HashMap<>();
         urlPorPestana = new HashMap<>();
@@ -188,8 +190,51 @@ public class Ventana extends JFrame {
         }
     }
 
+    private void cargarPaginaWeb(String url) {
+        String urlMostrada = url;
+
+        if (!urlMostrada.startsWith("http://") && !urlMostrada.startsWith("https://")) {
+            urlMostrada = "http://" + urlMostrada;
+        }
+
+        JTextPane nuevaArea = new JTextPane();
+        nuevaArea.setEditable(false);
+        nuevaArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
+
+        JScrollPane nuevoScroll = new JScrollPane(nuevaArea);
+
+        aplicarTemaArea(nuevaArea);
+
+        agregarPestana(urlMostrada, nuevoScroll, null);
+        pestanas.setSelectedComponent(nuevoScroll);
+        barra.setURL(urlMostrada);
+
+        mostrarEstadoCargando();
+
+        try {
+            String respuesta = clienteHTTP.obtenerRespuesta(urlMostrada);
+
+            nuevaArea.setText(respuesta);
+            renderizador.aplicarTemaTextoCompleto(nuevaArea, menu.isModoOscuro());
+
+            barraEstado.setText(" Listo");
+
+        } catch (Exception e) {
+            nuevaArea.setText(e.getMessage());
+            barraEstado.setText(" Error de conexión");
+            JOptionPane.showMessageDialog(this, e.getMessage());
+        }
+    }
+
     private void abrirUrlEnPestana(String url) {
         if (url == null || url.trim().isEmpty()) {
+            return;
+        }
+
+        url = url.trim();
+
+        if (!url.startsWith("file:///")) {
+            cargarPaginaWeb(url);
             return;
         }
 
@@ -213,12 +258,12 @@ public class Ventana extends JFrame {
         detectarClicks(nuevaArea);
         detectarHoverLinks(nuevaArea);
         aplicarTemaArea(nuevaArea);
-/*
+
         agregarPestana(urlNormalizada, nuevoScroll, null);
         pestanas.setSelectedComponent(nuevoScroll);
         barra.setURL(urlNormalizada);
 
-        cargarPaginaEnComponente(urlNormalizada, nuevoScroll);*/
+        cargarPaginaEnComponente(urlNormalizada, nuevoScroll);
     }
 
     private void cargarPaginaEnComponente(String url, Component componente) {
