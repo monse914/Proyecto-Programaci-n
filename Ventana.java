@@ -213,11 +213,9 @@ public class Ventana extends JFrame {
 
         try {
             String respuesta = clienteHTTP.obtenerRespuesta(urlMostrada);
-
+            barraEstado.setText(" " + clienteHTTP.getEstado());
             nuevaArea.setText(respuesta);
             renderizador.aplicarTemaTextoCompleto(nuevaArea, menu.isModoOscuro());
-
-            barraEstado.setText(" Listo");
 
         } catch (Exception e) {
             nuevaArea.setText(e.getMessage());
