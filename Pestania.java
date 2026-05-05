@@ -75,4 +75,38 @@ public class Pestania extends JPanel {
         etiquetasPestanas.remove(componente);
         pestanas.remove(componente);
     }
+    
+    public void liberarRecursos() {
+        if (areaContenido != null) {
+            areaContenido.setText("");
+            areaContenido.setDocument(new javax.swing.text.DefaultStyledDocument());
+
+            for (java.awt.event.MouseListener ml : areaContenido.getMouseListeners()) {
+                areaContenido.removeMouseListener(ml);
+            }
+
+            for (java.awt.event.MouseMotionListener mml : areaContenido.getMouseMotionListeners()) {
+                areaContenido.removeMouseMotionListener(mml);
+            }
+        }
+
+        if (barraNavegacion != null) {
+            barraNavegacion.setAccionNavegacion(null);
+            barraNavegacion.setURL("");
+        }
+
+        if (scrollContenido != null) {
+            scrollContenido.setViewportView(null);
+        }
+
+        removeAll();
+
+        barraNavegacion = null;
+        areaContenido = null;
+        scrollContenido = null;
+        urlActual = null;
+
+        revalidate();
+        repaint();
+    }
 }
