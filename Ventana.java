@@ -7,8 +7,7 @@ import javax.swing.*;
 
 public class Ventana extends JFrame {
 
-    private BarraNavegacion barra;
-    private JTextPane areaTexto;
+    private Pestania pestaniaInicial;
     private JTabbedPane pestanas;
     private JLabel barraEstado;
     private JProgressBar barraProgreso;
@@ -26,15 +25,13 @@ public class Ventana extends JFrame {
     private JButton btnMax;
     private JButton btnClose;
 
-    private Map<String, Component> pestanasPorUrl;
+    private Map<String, Pestania> pestanasPorUrl;
     private Map<Component, JLabel> etiquetasPestanas;
-    private Map<Component, String> urlPorPestana;
+    private Map<Pestania, String> urlPorPestana;
 
-    // mover ventana
     private int xMouse;
     private int yMouse;
 
-    // redimensionamiento
     private static final int BORDE = 8;
     private boolean redimensionando = false;
     private boolean resizeN;
@@ -58,6 +55,7 @@ public class Ventana extends JFrame {
 
         renderizador = new Renderizador();
         clienteHTTP = new ClienteHTTP();
+
         pestanasPorUrl = new HashMap<>();
         etiquetasPestanas = new HashMap<>();
         urlPorPestana = new HashMap<>();
@@ -98,18 +96,7 @@ public class Ventana extends JFrame {
             }
         });
 
-        btnClose.addActionListener(e -> {
-            int opcion = JOptionPane.showConfirmDialog(
-                    this,
-                    "¿Estás seguro que deseas cerrar la aplicación?",
-                    "Confirmar salida",
-                    JOptionPane.YES_NO_OPTION
-            );
-
-            if (opcion == JOptionPane.YES_OPTION) {
-                System.exit(0);
-            }
-        });
+        btnClose.addActionListener(e -> confirmarCierre());
 
         barraBotones.add(btnMin);
         barraBotones.add(btnMax);
@@ -118,28 +105,19 @@ public class Ventana extends JFrame {
         barraTitulo.add(tituloVentana, BorderLayout.WEST);
         barraTitulo.add(barraBotones, BorderLayout.EAST);
 
-        barra = new BarraNavegacion();
-
         panelSuperior.add(barraTitulo, BorderLayout.NORTH);
-        panelSuperior.add(barra, BorderLayout.SOUTH);
-
         add(panelSuperior, BorderLayout.NORTH);
-
-        areaTexto = new JTextPane();
-        areaTexto.setEditable(false);
-        areaTexto.setFont(new Font("Monospaced", Font.PLAIN, 14));
 
         pestanas = new JTabbedPane();
         add(pestanas, BorderLayout.CENTER);
 
-        JScrollPane scrollInicial = new JScrollPane(areaTexto);
-        agregarPestana("Inicio", scrollInicial, null);
+        pestaniaInicial = new Pestania();
 
-        detectarClicks(areaTexto);
-        detectarHoverLinks(areaTexto);
-
-        menu = new MenuSimple(areaTexto, this::aplicarTemaGeneral);
+        menu = new MenuSimple(pestaniaInicial.getAreaContenido(), this::aplicarTemaGeneral);
         setJMenuBar(menu);
+
+        configurarPestania(pestaniaInicial);
+        agregarPestana("Inicio", pestaniaInicial, null);
 
         panelEstado = new JPanel(new BorderLayout());
         panelEstado.setPreferredSize(new Dimension(800, 28));
@@ -157,26 +135,13 @@ public class Ventana extends JFrame {
 
         add(panelEstado, BorderLayout.SOUTH);
 
-        barra.setAccionNavegacion(url -> abrirUrlEnPestana(url));
-
         aplicarTemaGeneral(false, Color.WHITE, Color.BLACK);
 
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 
         addWindowListener(new WindowAdapter() {
-            @Override
             public void windowClosing(WindowEvent e) {
-                int opcion = JOptionPane.showConfirmDialog(
-                        Ventana.this,
-                        "¿Estás seguro que deseas cerrar la aplicación?",
-                        "Confirmar salida",
-                        JOptionPane.YES_NO_OPTION
-                );
-
-                if (opcion == JOptionPane.YES_OPTION) {
-                    System.exit(0);
-                }
+                confirmarCierre();
             }
         });
 
@@ -185,43 +150,58 @@ public class Ventana extends JFrame {
         setVisible(true);
 
         if (urlInicial != null && !urlInicial.isEmpty()) {
-            barra.setURL(urlInicial);
-            cargarPaginaEnComponente(urlInicial, scrollInicial);
+            pestaniaInicial.getBarraNavegacion().setURL(urlInicial);
+            cargarPaginaEnComponente(urlInicial, pestaniaInicial);
         }
     }
 
-    private void cargarPaginaWeb(String url) {
-        String urlMostrada = url;
+    private void confirmarCierre() {
+        int opcion = JOptionPane.showConfirmDialog(
+                this,
+                "¿Estás seguro que deseas cerrar la aplicación?",
+                "Confirmar salida",
+                JOptionPane.YES_NO_OPTION
+        );
 
-        if (!urlMostrada.startsWith("http://") && !urlMostrada.startsWith("https://")) {
-            urlMostrada = "http://" + urlMostrada;
+        if (opcion == JOptionPane.YES_OPTION) {
+            System.exit(0);
+        }
+    }
+
+    private void configurarPestania(Pestania pestania) {
+        detectarClicks(pestania.getAreaContenido());
+        detectarHoverLinks(pestania.getAreaContenido());
+
+        pestania.getBarraNavegacion().setAccionNavegacion(url -> {
+            navegarEnPestaniaActual(pestania, url);
+        });
+
+        aplicarTemaArea(pestania.getAreaContenido());
+    }
+
+    private void navegarEnPestaniaActual(Pestania pestania, String url) {
+        if (url == null || url.trim().isEmpty()) {
+            return;
         }
 
-        JTextPane nuevaArea = new JTextPane();
-        nuevaArea.setEditable(false);
-        nuevaArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
+        url = url.trim();
 
-        JScrollPane nuevoScroll = new JScrollPane(nuevaArea);
-
-        aplicarTemaArea(nuevaArea);
-
-        agregarPestana(urlMostrada, nuevoScroll, null);
-        pestanas.setSelectedComponent(nuevoScroll);
-        barra.setURL(urlMostrada);
-
-        mostrarEstadoCargando();
-
-        try {
-            String respuesta = clienteHTTP.obtenerRespuesta(urlMostrada);
-            barraEstado.setText(" " + clienteHTTP.getEstado());
-            nuevaArea.setText(respuesta);
-            renderizador.aplicarTemaTextoCompleto(nuevaArea, menu.isModoOscuro());
-
-        } catch (Exception e) {
-            nuevaArea.setText(e.getMessage());
-            barraEstado.setText(" Error de conexión");
-            JOptionPane.showMessageDialog(this, e.getMessage());
+        if (!url.startsWith("file:///")) {
+            cargarPaginaWebEnPestania(pestania, url);
+            return;
         }
+
+        String urlNormalizada = normalizarUrl(url);
+
+        Pestania pestaniaExistente = pestanasPorUrl.get(urlNormalizada);
+
+        if (pestaniaExistente != null && pestaniaExistente != pestania) {
+            pestanas.setSelectedComponent(pestaniaExistente);
+            barraEstado.setText(" Listo");
+            return;
+        }
+
+        cargarPaginaEnComponente(urlNormalizada, pestania);
     }
 
     private void abrirUrlEnPestana(String url) {
@@ -232,41 +212,69 @@ public class Ventana extends JFrame {
         url = url.trim();
 
         if (!url.startsWith("file:///")) {
-            cargarPaginaWeb(url);
+            Pestania nuevaPestania = new Pestania();
+            configurarPestania(nuevaPestania);
+
+            agregarPestana(url, nuevaPestania, null);
+            pestanas.setSelectedComponent(nuevaPestania);
+
+            cargarPaginaWebEnPestania(nuevaPestania, url);
             return;
         }
 
         String urlNormalizada = normalizarUrl(url);
 
-        Component pestanaExistente = pestanasPorUrl.get(urlNormalizada);
+        Pestania pestaniaExistente = pestanasPorUrl.get(urlNormalizada);
 
-        if (pestanaExistente != null) {
-            pestanas.setSelectedComponent(pestanaExistente);
-            barra.setURL(urlNormalizada);
+        if (pestaniaExistente != null) {
+            pestanas.setSelectedComponent(pestaniaExistente);
             barraEstado.setText(" Listo");
             return;
         }
 
-        JTextPane nuevaArea = new JTextPane();
-        nuevaArea.setEditable(false);
-        nuevaArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
+        Pestania nuevaPestania = new Pestania();
+        configurarPestania(nuevaPestania);
 
-        JScrollPane nuevoScroll = new JScrollPane(nuevaArea);
+        agregarPestana(urlNormalizada, nuevaPestania, null);
+        pestanas.setSelectedComponent(nuevaPestania);
 
-        detectarClicks(nuevaArea);
-        detectarHoverLinks(nuevaArea);
-        aplicarTemaArea(nuevaArea);
+        cargarPaginaEnComponente(urlNormalizada, nuevaPestania);
+    }
 
-        agregarPestana(urlNormalizada, nuevoScroll, null);
-        pestanas.setSelectedComponent(nuevoScroll);
-        barra.setURL(urlNormalizada);
+    private void cargarPaginaWebEnPestania(Pestania pestania, String url) {
+        String urlMostrada = url;
 
-        cargarPaginaEnComponente(urlNormalizada, nuevoScroll);
+        if (!urlMostrada.startsWith("http://") && !urlMostrada.startsWith("https://")) {
+            urlMostrada = "http://" + urlMostrada;
+        }
+
+        pestania.setUrlActual(urlMostrada);
+        pestania.getBarraNavegacion().setURL(urlMostrada);
+
+        mostrarEstadoCargando();
+
+        try {
+            String respuesta = clienteHTTP.obtenerRespuesta(urlMostrada);
+
+            JTextPane area = pestania.getAreaContenido();
+            area.setText(respuesta);
+
+            renderizador.aplicarTemaTextoCompleto(area, menu.isModoOscuro());
+
+            barraEstado.setText(" " + clienteHTTP.getEstado());
+
+            actualizarTituloPestana(pestania, urlMostrada);
+
+        } catch (Exception e) {
+            pestania.getAreaContenido().setText(e.getMessage());
+            barraEstado.setText(" Error de conexión");
+            JOptionPane.showMessageDialog(this, e.getMessage());
+        }
     }
 
     private void cargarPaginaEnComponente(String url, Component componente) {
         String urlNormalizada = normalizarUrl(url);
-        barra.setURL(urlNormalizada);
+
         mostrarEstadoCargando();
 
         barraProgreso.setVisible(true);
@@ -278,7 +286,9 @@ public class Ventana extends JFrame {
 
             try {
                 String ruta = obtenerRutaArchivo(urlNormalizada);
-                JTextPane area = getAreaDeComponente(componente);
+
+                Pestania pestania = (Pestania) componente;
+                JTextPane area = pestania.getAreaContenido();
 
                 renderizador.renderizarArchivo(ruta, area);
                 menu.aplicarTemaActual(area);
@@ -294,9 +304,13 @@ public class Ventana extends JFrame {
                     titulo = titulo.substring(0, 20) + "...";
                 }
 
-                actualizarTituloPestana(componente, titulo);
-                pestanasPorUrl.put(urlNormalizada, componente);
-                urlPorPestana.put(componente, urlNormalizada);
+                actualizarTituloPestana(pestania, titulo);
+
+                pestanasPorUrl.put(urlNormalizada, pestania);
+                urlPorPestana.put(pestania, urlNormalizada);
+
+                pestania.setUrlActual(urlNormalizada);
+                pestania.getBarraNavegacion().setURL(urlNormalizada);
 
                 barraEstado.setText(" Listo");
 
@@ -359,10 +373,6 @@ public class Ventana extends JFrame {
             String ruta = url.substring(8);
             File archivo = new File(ruta);
 
-            if (!archivo.isAbsolute()) {
-                archivo = new File(ruta);
-            }
-
             return "file:///" + archivo.getCanonicalPath().replace("\\", "/");
         } catch (Exception e) {
             return url;
@@ -373,19 +383,21 @@ public class Ventana extends JFrame {
         barraEstado.setText(" Cargando...");
     }
 
-    private void agregarPestana(String titulo, JScrollPane scroll, String url) {
-        pestanas.addTab(titulo, scroll);
+    private void agregarPestana(String titulo, Pestania pestania, String url) {
+        pestanas.addTab(titulo, pestania);
 
-        int index = pestanas.indexOfComponent(scroll);
-        JPanel encabezado = crearEncabezadoPestana(scroll, titulo);
+        int index = pestanas.indexOfComponent(pestania);
+        JPanel encabezado = crearEncabezadoPestana(pestania, titulo);
 
         pestanas.setTabComponentAt(index, encabezado);
-        etiquetasPestanas.put(scroll, (JLabel) encabezado.getComponent(0));
+        etiquetasPestanas.put(pestania, (JLabel) encabezado.getComponent(0));
 
         if (url != null) {
             String urlNormalizada = normalizarUrl(url);
-            pestanasPorUrl.put(urlNormalizada, scroll);
-            urlPorPestana.put(scroll, urlNormalizada);
+            pestanasPorUrl.put(urlNormalizada, pestania);
+            urlPorPestana.put(pestania, urlNormalizada);
+            pestania.setUrlActual(urlNormalizada);
+            pestania.getBarraNavegacion().setURL(urlNormalizada);
         }
     }
 
@@ -403,7 +415,6 @@ public class Ventana extends JFrame {
         btnCerrar.addActionListener(e -> cerrarPestana(componentePestana));
 
         MouseAdapter seleccionarPestana = new MouseAdapter() {
-            @Override
             public void mouseClicked(MouseEvent e) {
                 pestanas.setSelectedComponent(componentePestana);
             }
@@ -419,28 +430,28 @@ public class Ventana extends JFrame {
     }
 
     private void cerrarPestana(Component componente) {
-        String url = urlPorPestana.get(componente);
+        if (!(componente instanceof Pestania)) {
+            return;
+        }
+
+        Pestania pestania = (Pestania) componente;
+
+        String url = urlPorPestana.get(pestania);
 
         if (url != null) {
             pestanasPorUrl.remove(url);
-            urlPorPestana.remove(componente);
+            urlPorPestana.remove(pestania);
         }
 
-        etiquetasPestanas.remove(componente);
-        pestanas.remove(componente);
+        etiquetasPestanas.remove(pestania);
+        pestanas.remove(pestania);
 
         if (pestanas.getTabCount() == 0) {
-            JTextPane nuevaArea = new JTextPane();
-            nuevaArea.setEditable(false);
-            nuevaArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
+            Pestania nuevaPestania = new Pestania();
+            configurarPestania(nuevaPestania);
 
-            JScrollPane scroll = new JScrollPane(nuevaArea);
-            detectarClicks(nuevaArea);
-            detectarHoverLinks(nuevaArea);
-            aplicarTemaArea(nuevaArea);
-
-            agregarPestana("Inicio", scroll, null);
-            pestanas.setSelectedComponent(scroll);
+            agregarPestana("Inicio", nuevaPestania, null);
+            pestanas.setSelectedComponent(nuevaPestania);
         }
     }
 
@@ -458,16 +469,18 @@ public class Ventana extends JFrame {
     }
 
     private JTextPane getAreaDeComponente(Component comp) {
-        if (comp instanceof JScrollPane) {
-            JScrollPane scroll = (JScrollPane) comp;
-            return (JTextPane) scroll.getViewport().getView();
+        if (comp instanceof Pestania) {
+            return ((Pestania) comp).getAreaContenido();
         }
-        return areaTexto;
+
+        return pestaniaInicial.getAreaContenido();
     }
 
     private void aplicarTemaArea(JTextPane area) {
-        menu.aplicarTemaActual(area);
-        renderizador.aplicarTemaTextoCompleto(area, menu.isModoOscuro());
+        if (menu != null) {
+            menu.aplicarTemaActual(area);
+            renderizador.aplicarTemaTextoCompleto(area, menu.isModoOscuro());
+        }
     }
 
     private void aplicarTemaGeneral(boolean modoOscuro, Color fondoArea, Color textoArea) {
@@ -495,9 +508,6 @@ public class Ventana extends JFrame {
         tituloVentana.setForeground(textoPrincipal);
         barraBotones.setBackground(fondoPrincipal);
 
-        barra.setBackground(fondoSecundario);
-        barra.aplicarTema(modoOscuro);
-
         pestanas.setBackground(fondoPestanas);
         pestanas.setForeground(textoPrincipal);
 
@@ -510,18 +520,11 @@ public class Ventana extends JFrame {
         while (i < pestanas.getTabCount()) {
             Component comp = pestanas.getComponentAt(i);
 
-            if (comp instanceof JScrollPane) {
-                JScrollPane scroll = (JScrollPane) comp;
-                scroll.getViewport().setBackground(fondoArea);
-
-                Component vista = scroll.getViewport().getView();
-                if (vista instanceof JTextPane) {
-                    JTextPane area = (JTextPane) vista;
-                    area.setBackground(fondoArea);
-                    area.setForeground(textoArea);
-                    renderizador.aplicarTemaTextoCompleto(area, modoOscuro);
-                }
+            if (comp instanceof Pestania) {
+                Pestania p = (Pestania) comp;
+                p.aplicarTema(modoOscuro, fondoArea, textoArea, renderizador);
             }
+
             i++;
         }
 
@@ -613,11 +616,7 @@ public class Ventana extends JFrame {
                     return;
                 }
 
-                Point p = SwingUtilities.convertPoint(
-                        e.getComponent(),
-                        e.getPoint(),
-                        getRootPane()
-                );
+                Point p = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(), getRootPane());
 
                 actualizarDireccionResize(p);
                 actualizarCursor();
@@ -628,11 +627,7 @@ public class Ventana extends JFrame {
                     return;
                 }
 
-                Point p = SwingUtilities.convertPoint(
-                        e.getComponent(),
-                        e.getPoint(),
-                        getRootPane()
-                );
+                Point p = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(), getRootPane());
 
                 actualizarDireccionResize(p);
 
@@ -742,12 +737,17 @@ public class Ventana extends JFrame {
 
                 if (ruta != null) {
                     String urlNormalizada = normalizarUrl(ruta);
-                    barra.setURL(urlNormalizada);
 
-                    Component pestanaExistente = pestanasPorUrl.get(urlNormalizada);
+                    Component seleccionada = pestanas.getSelectedComponent();
 
-                    if (pestanaExistente != null) {
-                        pestanas.setSelectedComponent(pestanaExistente);
+                    if (seleccionada instanceof Pestania) {
+                        ((Pestania) seleccionada).getBarraNavegacion().setURL(urlNormalizada);
+                    }
+
+                    Pestania pestaniaExistente = pestanasPorUrl.get(urlNormalizada);
+
+                    if (pestaniaExistente != null) {
+                        pestanas.setSelectedComponent(pestaniaExistente);
                         barraEstado.setText(" Listo");
                     } else {
                         abrirUrlEnPestana(urlNormalizada);
