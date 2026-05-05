@@ -56,4 +56,23 @@ public class Pestania extends JPanel {
             renderizador.aplicarTemaTextoCompleto(areaContenido, modoOscuro);
         }
     }
+
+    private void cerrarPestana(Component componente) {
+        int index = pestanas.indexOfComponent(componente);
+
+        if(index == pestanas.getTabCount() - 1 ){
+            JOptionPane.showMessageDialog(this, "no puedes eliminar la ultima pestaña");
+            return;
+        }
+
+        String url = urlPorPestana.get(componente);
+
+        if(url != null){
+            pestanasPorUrl.remove(url);
+            urlPorPestana.remove(componente);
+        }
+
+        etiquetasPestanas.remove(componente);
+        pestanas.remove(componente);
+    }
 }
