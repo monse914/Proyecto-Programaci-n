@@ -430,30 +430,35 @@ public class Ventana extends JFrame {
     }
 
     private void cerrarPestana(Component componente) {
-        if (!(componente instanceof Pestania)) {
-            return;
-        }
-
-        Pestania pestania = (Pestania) componente;
-
-        String url = urlPorPestana.get(pestania);
-
-        if (url != null) {
-            pestanasPorUrl.remove(url);
-            urlPorPestana.remove(pestania);
-        }
-
-        etiquetasPestanas.remove(pestania);
-        pestanas.remove(pestania);
-
-        if (pestanas.getTabCount() == 0) {
-            Pestania nuevaPestania = new Pestania();
-            configurarPestania(nuevaPestania);
-
-            agregarPestana("Inicio", nuevaPestania, null);
-            pestanas.setSelectedComponent(nuevaPestania);
-        }
+    if (!(componente instanceof Pestania)) {
+        return;
     }
+
+    Pestania pestania = (Pestania) componente;
+
+    String url = urlPorPestana.get(pestania);
+
+    if (url != null) {
+        pestanasPorUrl.remove(url);
+        urlPorPestana.remove(pestania);
+    }
+
+    etiquetasPestanas.remove(pestania);
+
+    pestanas.remove(pestania);
+
+    pestania.liberarRecursos();
+
+    if (pestanas.getTabCount() == 0) {
+        Pestania nuevaPestania = new Pestania();
+        configurarPestania(nuevaPestania);
+
+        agregarPestana("Inicio", nuevaPestania, null);
+        pestanas.setSelectedComponent(nuevaPestania);
+    }
+
+    System.gc();
+}
 
     private void actualizarTituloPestana(Component componente, String titulo) {
         JLabel lbl = etiquetasPestanas.get(componente);
