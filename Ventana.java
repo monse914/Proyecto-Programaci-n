@@ -429,23 +429,24 @@ public class Ventana extends JFrame {
         return panel;
     }
 
-    private void cerrarPestana(Component componente) {
-    if (!(componente instanceof Pestania)) {
-        return;
+ private void cerrarPestana(Component componente) {
+        int index = pestanas.indexOfComponent(componente);
+
+        if(index == pestanas.getTabCount() - 1 ){
+            JOptionPane.showMessageDialog(this, "no puedes eliminar la ultima pestaña");
+            return;
+        }
+
+        String url = urlPorPestana.get(componente);
+
+        if(url != null){
+            pestanasPorUrl.remove(url);
+            urlPorPestana.remove(componente);
+        }
+
+        etiquetasPestanas.remove(componente);
+        pestanas.remove(componente);
     }
-
-    Pestania pestania = (Pestania) componente;
-
-    String url = urlPorPestana.get(pestania);
-
-    if (url != null) {
-        pestanasPorUrl.remove(url);
-        urlPorPestana.remove(pestania);
-    }
-
-    etiquetasPestanas.remove(pestania);
-
-    pestanas.remove(pestania);
 
     pestania.liberarRecursos();
 
