@@ -65,6 +65,18 @@ public class Ventana extends JFrame {
         barraTitulo = new JPanel(new BorderLayout());
         barraTitulo.setPreferredSize(new Dimension(800, 30));
 
+        JButton btnNuevaPestana = new JButton("+");
+        btnNuevaPestana.setFocusPainted(false);
+        btnNuevaPestana.setBorderPainted(false);
+        btnNuevaPestana.setPreferredSize(new Dimension(45, 25));
+
+        btnNuevaPestana.addActionListener(e -> {
+            Pestania nueva = new Pestania();
+            configurarPestania(nueva);
+            agregarPestana("Nueva pestaña", nueva, null);
+            pestanas.setSelectedComponent(nueva);
+        });
+
         tituloVentana = new JLabel(" Navegador Web");
         tituloVentana.setFont(new Font("Arial", Font.BOLD, 13));
 
@@ -102,7 +114,13 @@ public class Ventana extends JFrame {
         barraBotones.add(btnMax);
         barraBotones.add(btnClose);
 
-        barraTitulo.add(tituloVentana, BorderLayout.WEST);
+        JPanel izquierda = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        izquierda.setOpaque(false);
+        
+        izquierda.add(tituloVentana);
+        izquierda.add(btnNuevaPestana);
+        
+        barraTitulo.add(izquierda, BorderLayout.WEST);
         barraTitulo.add(barraBotones, BorderLayout.EAST);
 
         panelSuperior.add(barraTitulo, BorderLayout.NORTH);
