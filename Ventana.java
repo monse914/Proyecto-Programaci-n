@@ -129,6 +129,8 @@ public class Ventana extends JFrame {
         pestanas = new JTabbedPane();
         add(pestanas, BorderLayout.CENTER);
 
+        configurarAtajosTeclado();
+
         pestaniaInicial = new Pestania();
 
         menu = new MenuSimple(pestaniaInicial.getAreaContenido(), this::aplicarTemaGeneral);
@@ -789,6 +791,41 @@ public class Ventana extends JFrame {
                 }
 
                 renderizador.resaltarEnlaceEn(pos, area, menu.isModoOscuro());
+            }
+        });
+    }
+    private void configurarAtajosTeclado() {
+        
+        KeyboardFocusManager.getCurrentKeyboardFocusManager()
+        .addKeyEventDispatcher(new KeyEventDispatcher() {
+            @Override
+            public boolean dispatchKeyEvent(KeyEvent e) {
+                
+                if (e.getID() != KeyEvent.KEY_PRESSED) return false;
+                
+                if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_TAB && !e.isShiftDown()) {
+                    
+                    int total = pestanas.getTabCount();
+                    if (total == 0) return false;
+                    
+                    int actual = pestanas.getSelectedIndex();
+                    int siguiente = (actual + 1) % total;
+                    
+                    pestanas.setSelectedIndex(siguiente);
+                    return true; 
+                }
+                if (e.isControlDown() && e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_TAB) {
+                    
+                    int total = pestanas.getTabCount();
+                    if (total == 0) return false;
+                    
+                    int actual = pestanas.getSelectedIndex();
+                    int anterior = (actual - 1 + total) % total;
+                    
+                    pestanas.setSelectedIndex(anterior);
+                    return true;
+                }
+                return false;
             }
         });
     }
