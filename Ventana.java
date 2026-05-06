@@ -428,39 +428,35 @@ public class Ventana extends JFrame {
 
         return panel;
     }
-
- private void cerrarPestana(Component componente) {
-        int index = pestanas.indexOfComponent(componente);
-
-        if(index == pestanas.getTabCount() - 1 ){
-            JOptionPane.showMessageDialog(this, "no puedes eliminar la ultima pestaña");
-            return;
-        }
-
-        String url = urlPorPestana.get(componente);
-
-        if(url != null){
-            pestanasPorUrl.remove(url);
-            urlPorPestana.remove(componente);
-        }
-
-        etiquetasPestanas.remove(componente);
-        pestanas.remove(componente);
+     private void cerrarPestana(Component componente) {
+         int index = pestanas.indexOfComponent(componente);
+        
+         if (index == pestanas.getTabCount() - 1) {
+             JOptionPane.showMessageDialog(this, "no puedes eliminar la ultima pestaña");
+             return;
     }
-
-    pestania.liberarRecursos();
-
-    if (pestanas.getTabCount() == 0) {
-        Pestania nuevaPestania = new Pestania();
-        configurarPestania(nuevaPestania);
-
-        agregarPestana("Inicio", nuevaPestania, null);
-        pestanas.setSelectedComponent(nuevaPestania);
+         String url = urlPorPestana.get(componente);
+         if (url != null) {
+             pestanasPorUrl.remove(url);
+             urlPorPestana.remove(componente);
     }
-
-    System.gc();
-}
-
+         etiquetasPestanas.remove(componente);
+         pestanas.remove(componente);
+         
+         if (componente instanceof Pestania) {
+             ((Pestania) componente).liberarRecursos();
+         }
+         
+         if (pestanas.getTabCount() == 0) {
+             Pestania nueva = new Pestania();
+             configurarPestania(nueva);
+             
+             agregarPestana("Inicio", nueva, null);
+             pestanas.setSelectedComponent(nueva);
+         }
+         System.gc();
+     }
+    
     private void actualizarTituloPestana(Component componente, String titulo) {
         JLabel lbl = etiquetasPestanas.get(componente);
 
