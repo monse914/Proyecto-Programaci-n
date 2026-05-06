@@ -1,5 +1,6 @@
 import java.awt.*;
 import javax.swing.*;
+import java.util.ArrayList;
 
 public class Pestania extends JPanel {
 
@@ -7,11 +8,15 @@ public class Pestania extends JPanel {
     private JTextPane areaContenido;
     private JScrollPane scrollContenido;
     private String urlActual;
+    private java.util.List<String> historial = new java.util.ArrayList<>();
+    private int indice = -1;
+    private String estado = "";
 
     public Pestania() {
         setLayout(new BorderLayout());
 
         barraNavegacion = new BarraNavegacion();
+        historial = new ArrayList<>(historial.subList(0, indice + 1));
 
         areaContenido = new JTextPane();
         areaContenido.setEditable(false);
@@ -44,6 +49,13 @@ public class Pestania extends JPanel {
     public void setUrlActual(String urlActual) {
         this.urlActual = urlActual;
         barraNavegacion.setURL(urlActual);
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 
     public void aplicarTema(boolean modoOscuro, Color fondoArea, Color textoArea, Renderizador renderizador) {
@@ -89,5 +101,27 @@ public class Pestania extends JPanel {
 
         revalidate();
         repaint();
+    }
+
+    public void navegar(String url) { urlActual = url;
+        if (indice < historial.size() - 1) {
+            historial = new ArrayList<>(historial.subList(0, indice + 1));
+        }
+        historial.add(url);
+        indice++;
+    }
+        
+    public String atras() {
+        if (indice > 0) {
+            indice--; urlActual = historial.get(indice);
+        }
+        return urlActual;
+    }
+    
+    public String adelante() {
+        if (indice < historial.size() - 1) {
+            indice++; urlActual = historial.get(indice);
+        }
+        return urlActual;
     }
 }
