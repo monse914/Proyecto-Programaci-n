@@ -20,10 +20,13 @@ public class Ventana extends JFrame {
     private JPanel barraTitulo;
     private JPanel barraBotones;
     private JPanel panelEstado;
+    private JPanel barraHist;
 
     private JButton btnMin;
     private JButton btnMax;
     private JButton btnClose;
+    private JButton btnAtras;
+    private JButton btnAdelante;
 
     private Map<String, Pestania> pestanasPorUrl;
     private Map<Component, JLabel> etiquetasPestanas;
@@ -114,6 +117,39 @@ public class Ventana extends JFrame {
         barraBotones.add(btnMax);
         barraBotones.add(btnClose);
 
+        barraHist = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        barraHist.setOpaque(false);
+        btnAtras = new JButton("🡠");
+        btnAdelante = new JButton("🡢");
+        JButton[] botonesP = {btnAtras,btnAdelante};
+        for (JButton bp : botonesP) {
+            bp.setFocusPainted(false);
+            bp.setBorderPainted(false);
+            bp.setPreferredSize(new Dimension(50, 25));
+        }
+        barraHist.add(btnAtras);
+        barraHist.add(btnAdelante);
+        btnAtras.addActionListener(e -> {
+        Component comp = pestanas.getSelectedComponent();
+            if (comp instanceof Pestania) {
+                Pestania p = (Pestania) comp;
+                String url = p.atras();
+                if (url != null) {
+                    navegarEnPestaniaActual(p, url);
+                }
+            }
+        });
+        btnAdelante.addActionListener(e -> {
+        Component comp = pestanas.getSelectedComponent();
+            if (comp instanceof Pestania) {
+                Pestania p = (Pestania) comp;
+                String url = p.adelante();
+                if (url != null) {
+                    navegarEnPestaniaActual(p, url);
+                }
+            }
+        });
+
         JPanel izquierda = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         izquierda.setOpaque(false);
         
@@ -125,6 +161,7 @@ public class Ventana extends JFrame {
 
         panelSuperior.add(barraTitulo, BorderLayout.NORTH);
         add(panelSuperior, BorderLayout.NORTH);
+        panelSuperior.add(barraHist, BorderLayout.SOUTH);
 
         pestanas = new JTabbedPane();
         add(pestanas, BorderLayout.CENTER);
@@ -144,6 +181,17 @@ public class Ventana extends JFrame {
 
         barraEstado = new JLabel(" Listo");
         barraEstado.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+        pestanas.addChangeListener(e -> {
+        Component comp = pestanas.getSelectedComponent();
+        if (comp instanceof Pestania) {
+            Pestania p = (Pestania) comp;
+            String estado = p.getEstado();
+            if (estado != null) {
+                barraEstado.setText(" " + estado);
+            } else {
+                barraEstado.setText(" Listo");
+            }
+        }});
 
         barraProgreso = new JProgressBar();
         barraProgreso.setPreferredSize(new Dimension(140, 18));
@@ -270,7 +318,7 @@ public class Ventana extends JFrame {
 
         pestania.setUrlActual(urlMostrada);
         pestania.getBarraNavegacion().setURL(urlMostrada);
-
+        pestania.navegar(urlMostrada);
         mostrarEstadoCargando();
 
         try {
@@ -280,7 +328,8 @@ public class Ventana extends JFrame {
             area.setText(respuesta);
 
             renderizador.aplicarTemaTextoCompleto(area, menu.isModoOscuro());
-
+            String estado = clienteHTTP.getEstado();
+            pestania.setEstado(estado);
             barraEstado.setText(" " + clienteHTTP.getEstado());
 
             actualizarTituloPestana(pestania, urlMostrada);
