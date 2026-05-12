@@ -5,18 +5,17 @@ import java.util.ArrayList;
 public class Pestania extends JPanel {
 
     private BarraNavegacion barraNavegacion;
+    private Historial historial;
     private JTextPane areaContenido;
     private JScrollPane scrollContenido;
     private String urlActual;
-    private java.util.List<String> historial = new java.util.ArrayList<>();
-    private int indice = -1;
     private String estado = "";
 
     public Pestania() {
         setLayout(new BorderLayout());
 
         barraNavegacion = new BarraNavegacion();
-        historial = new ArrayList<>(historial.subList(0, indice + 1));
+        historial = new Historial();
 
         areaContenido = new JTextPane();
         areaContenido.setEditable(false);
@@ -32,6 +31,10 @@ public class Pestania extends JPanel {
 
     public BarraNavegacion getBarraNavegacion() {
         return barraNavegacion;
+    }
+
+    public Historial getHistorial(){
+        return historial;
     }
 
     public JTextPane getAreaContenido() {
