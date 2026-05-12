@@ -15,6 +15,7 @@ public class Ventana extends JFrame {
     private JLabel tituloVentana;
     private MenuSimple menu;
     private ClienteHTTP clienteHTTP;
+    private Historial historial;
 
     private JPanel panelSuperior;
     private JPanel barraTitulo;
@@ -61,6 +62,7 @@ public class Ventana extends JFrame {
 
         renderizador = new Renderizador();
         clienteHTTP = new ClienteHTTP();
+        historial = new Historial();
 
         pestanasPorUrl = new HashMap<>();
         etiquetasPestanas = new HashMap<>();
@@ -337,6 +339,7 @@ public class Ventana extends JFrame {
             barraEstado.setText(" " + clienteHTTP.getEstado());
 
             actualizarTituloPestana(pestania, urlMostrada);
+            historial.agregar(urlMostrada, urlMostrada);
 
         } catch (Exception e) {
             pestania.getAreaContenido().setText(e.getMessage());
@@ -377,6 +380,7 @@ public class Ventana extends JFrame {
                     titulo = titulo.substring(0, 20) + "...";
                 }
 
+                historial.agregar(urlNormalizada, titulo);
                 actualizarTituloPestana(pestania, titulo);
 
                 pestanasPorUrl.put(urlNormalizada, pestania);
