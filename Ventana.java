@@ -323,8 +323,8 @@ public class Ventana extends JFrame {
         }
 
         pestania.setUrlActual(urlMostrada);
+        pestania.getHistorial().navegar(urlMostrada);
         pestania.getBarraNavegacion().setURL(urlMostrada);
-        pestania.navegar(urlMostrada);
         mostrarEstadoCargando();
 
         try {
@@ -388,6 +388,7 @@ public class Ventana extends JFrame {
 
                 pestania.setUrlActual(urlNormalizada);
                 pestania.getBarraNavegacion().setURL(urlNormalizada);
+                pestania.getHistorial().navegar(urlNormalizada);
 
                 barraEstado.setText(" Listo");
 
