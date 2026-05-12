@@ -71,3 +71,53 @@ public class Historial {
         }
     }
 }
+
+import java.util.Stack;
+
+public class Historial {
+    private Stack<String>atras;
+    private Stack<String>adelante;
+    private String actual;
+
+    public Historial(){
+        atras = new Stack<>();
+        adelante = new Stack<>();
+        actual = null;
+    }
+
+    public void navegar(String url){
+        if(actual!=null){
+            atras.push(actual);
+        }
+        actual = url;
+        adelante.clear();
+    }
+    public String atras(){
+        if(atras. isEmpty()){
+            return actual;
+        }
+        adelante.push(actual);
+        actual= atras.pop();
+
+        return actual;
+    }
+
+    public String adelante(){
+        if(adelante. isEmpty()){
+            return actual; 
+        }
+        atras.push(actual);
+        actual= adelante.pop();
+
+        return actual;
+    }
+    public String getActual(){
+        return actual;
+    }
+    public boolean puedeAtras(){
+        return !atras.isEmpty();
+    }
+    public boolean puedeAdelante(){
+        return !adelante.isEmpty();
+    }
+}
