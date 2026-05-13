@@ -8,6 +8,8 @@ public class BarraNavegacion extends JPanel {
     private JTextField campoURL;
     private JButton botonIr;
     private AccionNavegacion accionNavegacion;
+    private JButton botonRecargar;
+    private AccionRecargar accionRecargar;
 
     public BarraNavegacion() {
         setLayout(new FlowLayout(FlowLayout.CENTER));
@@ -16,8 +18,11 @@ public class BarraNavegacion extends JPanel {
         campoURL.setPreferredSize(new Dimension(320, 28));
 
         botonIr = new JButton("Ir");
+        botonRecargar = new JButton("↻");
+        botonRecargar.setPreferredSize(new Dimension(50,28);
+        
         botonIr.setEnabled(false);
-
+        
         campoURL.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) {
                 validarCampoVacio();
@@ -34,9 +39,15 @@ public class BarraNavegacion extends JPanel {
 
         campoURL.addActionListener(e -> ejecutarNavegacion());
         botonIr.addActionListener(e -> ejecutarNavegacion());
+        botonRecargar.addActionListener(e-> {
+            if(accionRecargar != null){
+              accionRecargar.alRecargar();
+            }
+        });
 
         add(campoURL);
         add(botonIr);
+        add(botonRecargar);
     }
 
     private void validarCampoVacio() {
@@ -59,6 +70,10 @@ public class BarraNavegacion extends JPanel {
 
     public void setAccionNavegacion(AccionNavegacion accionNavegacion) {
         this.accionNavegacion = accionNavegacion;
+    }
+
+    public void setAccionRecargar(AccionRecargar accionRecargar){
+        this.accionRecargar = accionRecargar;
     }
 
     public boolean esURLLocalValida() {
@@ -98,5 +113,6 @@ public class BarraNavegacion extends JPanel {
 
     public interface AccionNavegacion {
         void alNavegar(String url);
+        void alRecargar();
     }
 }
