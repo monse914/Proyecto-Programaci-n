@@ -343,6 +343,14 @@ public class Ventana extends JFrame {
             navegarEnPestaniaActual(pestania, url);
         });
 
+        pestania.getBarraNavegacion().setAccionRecargar(() ->{
+            String url = pestania.getUrlActual();
+
+            if(url != null && !url.isEmpty()){
+                navegarEnPestaniaActual(pestania, url);
+            }
+        });
+
         aplicarTemaArea(pestania.getAreaContenido());
     }
 
