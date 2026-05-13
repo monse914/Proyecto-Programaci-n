@@ -16,6 +16,9 @@ public class Ventana extends JFrame {
     private MenuSimple menu;
     private ClienteHTTP clienteHTTP;
     private Historial historial;
+    private JList<String> listaHistorial;
+    private DefaultListModel<String> modeloHistorial;
+    private JScrollPane panelHistorial;
 
     private JPanel panelSuperior;
     private JPanel barraTitulo;
@@ -83,7 +86,10 @@ public class Ventana extends JFrame {
         btnMax = new JButton("❑");
         btnClose = new JButton("x");
 
-        JButton[] botones = {btnMin, btnMax, btnClose};
+        JButton btnAtras = new JButton("←");
+        JButton btnAdelante= new JButton("→");
+
+        JButton[] botones = {btnAtras, btnAdelante, btnMin, btnMax, btnClose};
 
         for (JButton b : botones) {
             b.setFocusPainted(false);
@@ -106,6 +112,12 @@ public class Ventana extends JFrame {
 
         btnClose.addActionListener(e -> confirmarCierre());
 
+        btnAtras.addActionListener(e -> volverAtras());
+        btnAdelante.addActionListener(e -> avanzarHistorial());
+
+        barraBotones.add(btnAtras);
+        barraBotones.add(btnAdelante);
+
         barraBotones.add(btnMin);
         barraBotones.add(btnMax);
         barraBotones.add(btnClose);
@@ -114,6 +126,7 @@ public class Ventana extends JFrame {
         barraHist.setOpaque(false);
         btnAtras = new JButton("🡠");
         btnAdelante = new JButton("🡢");
+
         JButton[] botonesP = {btnAtras,btnAdelante};
         for (JButton bp : botonesP) {
             bp.setFocusPainted(false);
@@ -159,6 +172,13 @@ public class Ventana extends JFrame {
         add(panelSuperior, BorderLayout.NORTH);
 
         pestanas = new JTabbedPane();
+        pestanas.addChangeListener(e -> {
+            Component comp = pestanas.getSelectedComponent();
+            if(comp instanceof Pestania){
+                actualizarPanelHistorial((Pestania) comp);
+            }
+        });
+
         pestanas.setFocusable(false);
 
         pestanas.setUI(new javax.swing.plaf.basic.BasicTabbedPaneUI() {
@@ -167,15 +187,33 @@ public class Ventana extends JFrame {
                 return 0;
             }
         });
+        modeloHistorial = new DefaultListModel<>();
+        listaHistorial = new JList<>(modeloHistorial);
+        listaHistorial.setFont(new Font("Arial", Font.PLAIN, 13));
+        listaHistorial.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        
+        panelHistorial = new JScrollPane(listaHistorial);
+        panelHistorial.setPreferredSize(new Dimension(220, 0));
+        panelHistorial.setVisible(false);
 
+        listaHistorial.setBackground(new Color(45,45,45));
+        listaHistorial.setForeground(Color.WHITE);
+        panelHistorial.getViewport().setBackground(new Color(45,45,45));
+        
+        panelHistorial.setBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(new Color(70,70,70)), "Historial")
+            );
+        
+        add(panelHistorial, BorderLayout.EAST);
         add(pestanas, BorderLayout.CENTER);
-
+        
         configurarAtajosTeclado();
         agregarBotonNuevaPestana();
 
         pestaniaInicial = new Pestania();
 
-        menu = new MenuSimple(pestaniaInicial.getAreaContenido(), this::aplicarTemaGeneral);
+        menu = new MenuSimple(pestaniaInicial.getAreaContenido(), this, this::aplicarTemaGeneral);
         setJMenuBar(menu);
 
         configurarPestania(pestaniaInicial);
@@ -228,6 +266,50 @@ public class Ventana extends JFrame {
             cargarPaginaEnComponente(urlInicial, pestaniaInicial);
         }
     }
+    private void volverAtras() {
+        Component seleccionada = pestanas.getSelectedComponent();
+        if (!(seleccionada instanceof Pestania)) {
+            return;
+        }
+        
+        Pestania pestania = (Pestania) seleccionada;
+        
+        String url = pestania.getHistorial().atras();
+        
+        if (url == null) {
+            return;
+        }
+        
+        if (url.startsWith("file:///")) {
+            cargarPaginaEnComponente(url, pestania);
+        } else {
+            cargarPaginaWebEnPestania(pestania, url);
+            pestania.getHistorial().navegar(url);
+            actualizarPanelHistorial(pestania);
+        }
+    }
+    private void avanzarHistorial() {
+
+        Component seleccionada = pestanas.getSelectedComponent();
+
+        if (!(seleccionada instanceof Pestania)) {
+            return;
+        }
+
+        Pestania pestania = (Pestania) seleccionada;
+
+        String url = pestania.getHistorial().adelante();
+
+        if (url == null) {
+            return;
+        }
+
+        if (url.startsWith("file:///")) {
+            cargarPaginaEnComponente(url, pestania);
+        } else {
+            cargarPaginaWebEnPestania(pestania, url);
+        }
+    }
 
     private void confirmarCierre() {
         int opcion = JOptionPane.showConfirmDialog(
@@ -239,6 +321,17 @@ public class Ventana extends JFrame {
 
         if (opcion == JOptionPane.YES_OPTION) {
             System.exit(0);
+        }
+    }
+    public void mostrarOcultarHistorial(){
+        panelHistorial.setVisible(!panelHistorial.isVisible());
+        repaint();
+        revalidate();
+        
+        Component comp = pestanas.getSelectedComponent();
+        
+        if(comp instanceof Pestania){
+            actualizarPanelHistorial((Pestania) comp);
         }
     }
 
@@ -331,7 +424,7 @@ public class Ventana extends JFrame {
             String respuesta = clienteHTTP.obtenerRespuesta(urlMostrada);
 
             JTextPane area = pestania.getAreaContenido();
-            area.setText(respuesta);
+            renderizador.renderizarHTML(respuesta, area);
 
             renderizador.aplicarTemaTextoCompleto(area, menu.isModoOscuro());
             String estado = clienteHTTP.getEstado();
@@ -339,7 +432,7 @@ public class Ventana extends JFrame {
             barraEstado.setText(" " + clienteHTTP.getEstado());
 
             actualizarTituloPestana(pestania, urlMostrada);
-            historial.agregar(urlMostrada, urlMostrada);
+            historial.navegar(urlMostrada, urlMostrada);
 
         } catch (Exception e) {
             pestania.getAreaContenido().setText(e.getMessage());
@@ -380,7 +473,7 @@ public class Ventana extends JFrame {
                     titulo = titulo.substring(0, 20) + "...";
                 }
 
-                historial.agregar(urlNormalizada, titulo);
+                historial.navegar(urlNormalizada);
                 actualizarTituloPestana(pestania, titulo);
 
                 pestanasPorUrl.put(urlNormalizada, pestania);
@@ -461,6 +554,16 @@ public class Ventana extends JFrame {
         barraEstado.setText(" Cargando...");
     }
 
+   private void actualizarPanelHistorial(Pestania pestania){
+    modeloHistorial.clear();
+    
+    Historial historial = pestania.getHistorial();
+    
+    for(String url : historial.obtenerHistorial()){
+        modeloHistorial.addElement(url);
+        }
+    }
+    
     private void agregarPestana(String titulo, Pestania pestania, String url) {
         pestanas.addTab(titulo, pestania);
 
@@ -469,6 +572,7 @@ public class Ventana extends JFrame {
             pestanasPorUrl.put(urlNormalizada, pestania);
             urlPorPestana.put(pestania, urlNormalizada);
             pestania.setUrlActual(urlNormalizada);
+            pestania.getHistorial().navegar(urlNormalizada);
             pestania.getBarraNavegacion().setURL(urlNormalizada);
         }
 
@@ -986,7 +1090,7 @@ public class Ventana extends JFrame {
     private void detectarClicks(JTextPane area) {
         area.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
-                int pos = area.viewToModel2D(e.getPoint());
+                int pos = area.viewToModel(e.getPoint());
                 String ruta = renderizador.getRutaEnlaceEn(area, pos);
 
                 if (ruta != null) {
@@ -1014,7 +1118,7 @@ public class Ventana extends JFrame {
     private void detectarHoverLinks(JTextPane area) {
         area.addMouseMotionListener(new MouseMotionAdapter() {
             public void mouseMoved(MouseEvent e) {
-                int pos = area.viewToModel2D(e.getPoint());
+                int pos = area.viewToModel(e.getPoint());
 
                 if (renderizador.esEnlace(area, pos)) {
                     area.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -1050,6 +1154,24 @@ public class Ventana extends JFrame {
                         return false;
                     }
                 });
+    }
+
+    private void mostrarHistorial() {
+        Component seleccionada = pestanas.getSelectedComponent();
+        
+        if (!(seleccionada instanceof Pestania)) {
+            return;
+        }
+        
+        Pestania actual = (Pestania) seleccionada;
+        
+        StringBuilder texto = new StringBuilder();
+        
+        for(String pagina : actual.getHistorial().getPaginas()) {
+            texto.append(pagina).append("\n");
+        }
+        
+        JOptionPane.showMessageDialog(this, texto.toString(), "Historial", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void seleccionarSiguientePestanaReal() {
