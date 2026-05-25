@@ -5,23 +5,45 @@ import java.util.ArrayList;
 public class Pestania extends JPanel {
 
     private BarraNavegacion barraNavegacion;
-    private Historial historial;
     private JTextPane areaContenido;
     private JScrollPane scrollContenido;
     private String urlActual;
+    private java.util.List<String> historial = new java.util.ArrayList<>();
+    private int indice = -1;
     private String estado = "";
 
     public Pestania() {
         setLayout(new BorderLayout());
 
         barraNavegacion = new BarraNavegacion();
-        historial = new Historial();
 
         areaContenido = new JTextPane();
-        areaContenido.setEditable(false);
+        areaContenido.setBorder(
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        );
         areaContenido.setFont(new Font("Monospaced", Font.PLAIN, 14));
+        areaContenido.setHighlighter(null);
+        areaContenido.setFocusable(false);
+        areaContenido.setSelectionColor(
+                new Color(0,0,0,0)
+        );
 
         scrollContenido = new JScrollPane(areaContenido);
+        scrollContenido.setBorder(
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createEmptyBorder(1, 1, 1, 1),
+                        BorderFactory.createLineBorder(
+                                new Color(120,120,120),
+                                1
+                        )
+                )
+        );
+
+        scrollContenido.setViewportBorder(null);
+
+        scrollContenido.setFocusable(false);
+
+        scrollContenido.getViewport().setFocusable(false);
 
         add(barraNavegacion, BorderLayout.NORTH);
         add(scrollContenido, BorderLayout.CENTER);
@@ -31,10 +53,6 @@ public class Pestania extends JPanel {
 
     public BarraNavegacion getBarraNavegacion() {
         return barraNavegacion;
-    }
-
-    public Historial getHistorial(){
-        return historial;
     }
 
     public JTextPane getAreaContenido() {
@@ -57,6 +75,7 @@ public class Pestania extends JPanel {
     public String getEstado() {
         return estado;
     }
+
     public void setEstado(String estado) {
         this.estado = estado;
     }
@@ -71,7 +90,7 @@ public class Pestania extends JPanel {
             renderizador.aplicarTemaTextoCompleto(areaContenido, modoOscuro);
         }
     }
-    
+
     public void liberarRecursos() {
         if (areaContenido != null) {
             areaContenido.setText("");
@@ -84,10 +103,17 @@ public class Pestania extends JPanel {
             for (java.awt.event.MouseMotionListener mml : areaContenido.getMouseMotionListeners()) {
                 areaContenido.removeMouseMotionListener(mml);
             }
+
+            for (javax.swing.event.HyperlinkListener hl : areaContenido.getHyperlinkListeners()) {
+                areaContenido.removeHyperlinkListener(hl);
+            }
         }
 
         if (barraNavegacion != null) {
             barraNavegacion.setAccionNavegacion(null);
+            barraNavegacion.setAccionRecargar(null);
+            barraNavegacion.setAccionFavorito(null);
+            barraNavegacion.setAccionMostrarFavoritos(null);
             barraNavegacion.setURL("");
         }
 
@@ -106,25 +132,32 @@ public class Pestania extends JPanel {
         repaint();
     }
 
-    public void navegar(String url) { urlActual = url;
+    public void navegar(String url) {
+        urlActual = url;
+
         if (indice < historial.size() - 1) {
             historial = new ArrayList<>(historial.subList(0, indice + 1));
         }
+
         historial.add(url);
         indice++;
     }
-        
+
     public String atras() {
         if (indice > 0) {
-            indice--; urlActual = historial.get(indice);
+            indice--;
+            urlActual = historial.get(indice);
         }
+
         return urlActual;
     }
-    
+
     public String adelante() {
         if (indice < historial.size() - 1) {
-            indice++; urlActual = historial.get(indice);
+            indice++;
+            urlActual = historial.get(indice);
         }
+
         return urlActual;
     }
 }
