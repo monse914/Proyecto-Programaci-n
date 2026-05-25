@@ -47,6 +47,19 @@ public class Renderizador {
         parsearHTML(html, doc, archivo.getParentFile(), areaContenido);
     }
 
+    public void renderizarHTML(String html, JTextPane areaContenido) throws Exception {
+        areaContenido.setText("");
+
+        javax.swing.text.StyledDocument doc = areaContenido.getStyledDocument();
+
+        String limpio = eliminarScriptsYStyles(html);
+        limpio = extraerBody(limpio);
+
+        java.io.File carpetaBase = new java.io.File(".");
+
+        parsearHTML(limpio, doc, carpetaBase, areaContenido);
+    }
+
     private String extraerBody(String html) {
         String lower = html.toLowerCase();
 
