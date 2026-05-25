@@ -1,70 +1,90 @@
-import java.util.Stack;
 import java.util.ArrayList;
+import java.util.List;
 
 public class Historial {
-    private Stack<String>atras;
-    private Stack<String>adelante;
-    private String actual;
-    private ArrayList<String> paginas;
 
-    public Historial(){
-        atras = new Stack<>();
-        adelante = new Stack<>();
-        paginas = new ArrayList<>();
-        actual = null;
-    }
-    
-    public void navegar(String url){
-        if(actual != null){
-            atras.push(actual);
-        }
-        
-        actual = url;
-        paginas.add(url);
-        
-        if(paginas.size() > 10){
-            paginas.remove(0);
-        }
-        adelante.clear();
-    }
-    
-    public String atras(){
-        if(atras. isEmpty()){
-            return actual;
-        }
-        adelante.push(actual);
-        actual= atras.pop();
+    private List<EntradaHistorial> entradas;
+    private static final int LIMITE = 10;
 
-        return actual;
+    public Historial() {
+        entradas = new ArrayList<>();
     }
 
-    public String adelante(){
-        if(adelante. isEmpty()){
-            return actual; 
+    public void agregar(String url, String titulo) {
+        if (url == null || url.trim().isEmpty()) {
+            return;
         }
-        atras.push(actual);
-        actual= adelante.pop();
 
-        return actual;
-    }
-    public String getActual(){
-        return actual;
-    }
-    public boolean puedeAtras(){
-        return !atras.isEmpty();
-    }
-    public boolean puedeAdelante(){
-        return !adelante.isEmpty();
-    }
-    public ArrayList<String> getPaginas(){
-    return paginas;
-    }
-    public java.util.List<String> obtenerHistorial(){
-        java.util.List<String> lista = new java.util.ArrayList<>();
-        lista.addAll(atras);
-        if(actual != null){
-            lista.add(actual);
+        url = url.trim();
+
+        if (titulo == null || titulo.trim().isEmpty()) {
+            titulo = "Sin título";
         }
-        return lista;
+
+        // No guardar urls duplicadas consecutivas
+        if (!entradas.isEmpty()) {
+            EntradaHistorial ultima = entradas.get(entradas.size() - 1);
+
+            if (ultima.getUrl().equals(url)) {
+                return;
+            }
+        }
+
+        entradas.add(new EntradaHistorial(url, titulo));
+
+        // Mantener solo las últimas 10 entradas
+        while (entradas.size() > LIMITE) {
+            entradas.remove(0);
+        }
+    }
+
+    public List<EntradaHistorial> getEntradas() {
+        return entradas;
+    }
+
+    public void limpiar() {
+        entradas.clear();
+    }
+
+    public String mostrarHistorial() {
+        StringBuilder sb = new StringBuilder();
+
+        if (entradas.isEmpty()) {
+            return "No hay páginas visitadas.";
+        }
+
+        int i = 0;
+        while (i < entradas.size()) {
+            EntradaHistorial entrada = entradas.get(i);
+
+            sb.append(i + 1)
+                    .append(". ")
+                    .append(entrada.getTitulo())
+                    .append(" - ")
+                    .append(entrada.getUrl())
+                    .append("\n");
+
+            i++;
+        }
+
+        return sb.toString();
+    }
+
+    public static class EntradaHistorial {
+        private String url;
+        private String titulo;
+
+        public EntradaHistorial(String url, String titulo) {
+            this.url = url;
+            this.titulo = titulo;
+        }
+
+        public String getUrl() {
+            return url;
+        }
+
+        public String getTitulo() {
+            return titulo;
+        }
     }
 }
