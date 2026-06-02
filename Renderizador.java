@@ -84,9 +84,12 @@ public class Renderizador {
     private String eliminarScriptsYStyles(String html) {
         html = html.replaceAll("(?is)<script.*?>.*?</script>", "");
         html = html.replaceAll("(?is)<style.*?>.*?</style>", "");
+        html = html.replaceAll("(?is)<head.*?>.*?</head>", "");
+        html = html.replaceAll("(?is)<meta.*?>","");
+
         return html;
     }
-
+    
     private void parsearHTML(String html, StyledDocument doc, File carpetaBase, JTextPane area) {
         Pattern patron = Pattern.compile("(?is)<[^>]+>|[^<]+");
         Matcher matcher = patron.matcher(html);
