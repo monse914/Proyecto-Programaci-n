@@ -1,8 +1,8 @@
 import java.awt.*;
+import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import java.awt.event.ActionListener;
 
 public class BarraNavegacion extends JPanel {
 
@@ -14,6 +14,8 @@ public class BarraNavegacion extends JPanel {
     private JButton botonOpciones;
     private JPopupMenu menuOpcionesPopup;
 
+    private boolean modoOscuro = false;
+
     private AccionNavegacion accionNavegacion;
     private AccionRecargar accionRecargar;
     private AccionFavorito accionFavorito;
@@ -22,34 +24,63 @@ public class BarraNavegacion extends JPanel {
     public BarraNavegacion() {
         setLayout(new FlowLayout(FlowLayout.CENTER));
 
-        campoURL = new JTextField(30);
-        campoURL.setPreferredSize(new Dimension(320, 28));
-
-        botonIr = new JButton("Ir");
-        botonIr.setEnabled(false);
+        campoURL = new JTextField(40);
+        campoURL.setPreferredSize(new Dimension(500, 28));
 
         botonRecargar = new JButton("↻");
-        aplicarEstiloBotonIcono(botonRecargar);
-        botonRecargar.setFont(
-                botonRecargar.getFont().deriveFont(20f)
-        );
-
         botonFavorito = new JButton("☆");
-        aplicarEstiloBotonIcono(botonFavorito);
-        botonFavorito.setFont(
-                botonFavorito.getFont().deriveFont(20f)
-        );
-
+        botonIr = new JButton("Ir");
         botonVerFavoritos = new JButton("Favoritos");
-
         botonOpciones = new JButton("Opciones");
-        botonOpciones.setFocusPainted(false);
-        botonOpciones.setBorderPainted(false);
-        botonOpciones.setBackground(Color.WHITE);
-        botonOpciones.setForeground(Color.BLACK);
-        botonOpciones.setPreferredSize(new Dimension(100, 28));
+
+        botonIr.setEnabled(false);
+
         menuOpcionesPopup = new JPopupMenu();
 
+        configurarBotonIcono(botonRecargar);
+        configurarBotonIcono(botonFavorito);
+
+        Dimension tamBotonTexto = new Dimension(95, 28);
+        configurarBotonTexto(botonIr, new Dimension(45, 28));
+        configurarBotonTexto(botonVerFavoritos, tamBotonTexto);
+        configurarBotonTexto(botonOpciones, tamBotonTexto);
+
+        configurarEventos();
+        configurarHoverBotones();
+
+        add(botonRecargar);
+        add(botonFavorito);
+        add(campoURL);
+        add(botonIr);
+        add(botonVerFavoritos);
+        add(botonOpciones);
+
+        aplicarTema(false);
+    }
+
+    private void configurarBotonIcono(JButton boton) {
+        boton.setFocusPainted(false);
+        boton.setBorderPainted(false);
+        boton.setContentAreaFilled(false);
+        boton.setOpaque(false);
+        boton.setPreferredSize(new Dimension(46, 30));
+        boton.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 20));
+        boton.setMargin(new Insets(-3, 0, 0, 0));
+        boton.setHorizontalAlignment(SwingConstants.CENTER);
+        boton.setVerticalAlignment(SwingConstants.CENTER);
+        boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    }
+
+    private void configurarBotonTexto(JButton boton, Dimension tamano) {
+        boton.setFocusPainted(false);
+        boton.setBorderPainted(false);
+        boton.setOpaque(true);
+        boton.setContentAreaFilled(true);
+        boton.setPreferredSize(tamano);
+        boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    }
+
+    private void configurarEventos() {
         campoURL.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) {
                 validarCampoVacio();
@@ -84,15 +115,6 @@ public class BarraNavegacion extends JPanel {
                 accionMostrarFavoritos.alMostrarFavoritos();
             }
         });
-
-        add(botonRecargar);
-        add(botonFavorito);
-        add(campoURL);
-        add(botonIr);
-        add(botonVerFavoritos);
-        add(botonOpciones);
-
-        configurarHoverBotones();
     }
 
     private void configurarHoverBotones() {
@@ -103,29 +125,46 @@ public class BarraNavegacion extends JPanel {
                 botonVerFavoritos,
                 botonOpciones
         };
-        for (JButton b : botones) {
-            b.setFocusPainted(false);
-            b.setBorderPainted(false);
 
-            b.addMouseListener(new java.awt.event.MouseAdapter() {
-                public void mouseEntered(java.awt.event.MouseEvent e) {
-                    if (b == botonRecargar || b == botonFavorito) {
-                        b.setOpaque(true);
-                        b.setBackground(new Color(180, 215, 255));
-                    } else {
-                        b.setBackground(new Color(180, 215, 255));
-                    }
+        for (JButton b : botones) {
+            b.addMouseListener(new MouseAdapter() {
+                public void mouseEntered(MouseEvent e) {
+                    b.setOpaque(true);
+                    b.setContentAreaFilled(true);
+                    b.setBackground(new Color(180, 215, 255));
+                    b.setForeground(Color.BLACK);
+                    b.repaint();
                 }
 
-                public void mouseExited(java.awt.event.MouseEvent e) {
-                    if (b == botonRecargar || b == botonFavorito) {
-                        b.setOpaque(false);
-                        b.setBackground(new Color(0,0,0,0));
-                    } else {
-                        b.setBackground(Color.WHITE);
-                    }
+                public void mouseExited(MouseEvent e) {
+                    aplicarTemaBoton(b);
+                    b.repaint();
                 }
             });
+        }
+    }
+
+    private void aplicarTemaBoton(JButton boton) {
+        Color texto;
+        Color fondoBoton;
+
+        if (modoOscuro) {
+            texto = Color.WHITE;
+            fondoBoton = new Color(90, 90, 90);
+        } else {
+            texto = Color.BLACK;
+            fondoBoton = Color.WHITE;
+        }
+
+        boton.setForeground(texto);
+
+        if (boton == botonRecargar || boton == botonFavorito) {
+            boton.setOpaque(false);
+            boton.setContentAreaFilled(false);
+        } else {
+            boton.setOpaque(true);
+            boton.setContentAreaFilled(true);
+            boton.setBackground(fondoBoton);
         }
     }
 
@@ -155,6 +194,37 @@ public class BarraNavegacion extends JPanel {
         }
     }
 
+    public void aplicarTema(boolean modoOscuro) {
+        this.modoOscuro = modoOscuro;
+
+        Color fondo;
+
+        if (modoOscuro) {
+            fondo = new Color(60, 60, 60);
+            campoURL.setBackground(new Color(80, 80, 80));
+            campoURL.setForeground(Color.WHITE);
+            campoURL.setCaretColor(Color.WHITE);
+        } else {
+            fondo = new Color(240, 240, 240);
+            campoURL.setBackground(Color.WHITE);
+            campoURL.setForeground(Color.BLACK);
+            campoURL.setCaretColor(Color.BLACK);
+        }
+
+        setBackground(fondo);
+
+        aplicarTemaBoton(botonIr);
+        aplicarTemaBoton(botonRecargar);
+        aplicarTemaBoton(botonFavorito);
+        aplicarTemaBoton(botonVerFavoritos);
+        aplicarTemaBoton(botonOpciones);
+    }
+
+    public boolean esURLLocalValida() {
+        String url = getURL();
+        return !url.isEmpty() && url.startsWith("file:///");
+    }
+
     public void setAccionNavegacion(AccionNavegacion accionNavegacion) {
         this.accionNavegacion = accionNavegacion;
     }
@@ -171,91 +241,12 @@ public class BarraNavegacion extends JPanel {
         this.accionMostrarFavoritos = accionMostrarFavoritos;
     }
 
-    public boolean esURLLocalValida() {
-        String url = getURL();
-        return !url.isEmpty() && url.startsWith("file:///");
-    }
-
-    private void aplicarEstiloBotonIcono(JButton boton) {
-
-        boton.setFocusPainted(false);
-        boton.setBorderPainted(false);
-        boton.setContentAreaFilled(false);
-
-        boton.setPreferredSize(new Dimension(46, 30));
-
-        boton.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 14));
-
-        boton.setHorizontalAlignment(SwingConstants.CENTER);
-        boton.setVerticalAlignment(SwingConstants.CENTER);
-
-        boton.setMargin(new Insets(0, 0, 0, 0));
-
-        boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-    }
-
-    public void aplicarTema(boolean modoOscuro) {
-        Color fondo;
-        Color texto;
-        Color fondoBoton;
-
-        if (modoOscuro) {
-            fondo = new Color(60, 60, 60);
-            texto = Color.WHITE;
-            fondoBoton = new Color(90, 90, 90);
-        } else {
-            texto = Color.BLACK;
-            fondo = new Color(240, 240, 240);
-            fondoBoton = Color.WHITE;
-        }
-
-        setBackground(fondo);
-
-        campoURL.setBackground(Color.WHITE);
-        campoURL.setForeground(Color.BLACK);
-        campoURL.setCaretColor(Color.BLACK);
-
-        if (modoOscuro) {
-            campoURL.setBackground(new Color(80, 80, 80));
-            campoURL.setForeground(Color.WHITE);
-            campoURL.setCaretColor(Color.WHITE);
-        }
-
-        botonIr.setBackground(fondoBoton);
-        botonIr.setForeground(texto);
-
-        botonRecargar.setForeground(texto);
-
-        botonFavorito.setForeground(texto);
-
-        botonVerFavoritos.setBackground(fondoBoton);
-        botonVerFavoritos.setForeground(texto);
-    }
-
-    public interface AccionNavegacion {
-        void alNavegar(String url);
-    }
-
-    public interface AccionRecargar {
-        void alRecargar();
-    }
-
-    public interface AccionFavorito {
-        void alCambiarFavorito();
-    }
-
-    public interface AccionMostrarFavoritos {
-        void alMostrarFavoritos();
-    }
-
     public void configurarMenuOpciones(MenuSimple menu) {
-
         menuOpcionesPopup.removeAll();
 
         JMenu menuOriginal = menu.getMenuOpciones();
 
         for (int i = 0; i < menuOriginal.getItemCount(); i++) {
-
             JMenuItem item = menuOriginal.getItem(i);
 
             if (item != null) {
@@ -278,5 +269,21 @@ public class BarraNavegacion extends JPanel {
                     botonOpciones.getHeight()
             );
         });
+    }
+
+    public interface AccionNavegacion {
+        void alNavegar(String url);
+    }
+
+    public interface AccionRecargar {
+        void alRecargar();
+    }
+
+    public interface AccionFavorito {
+        void alCambiarFavorito();
+    }
+
+    public interface AccionMostrarFavoritos {
+        void alMostrarFavoritos();
     }
 }
