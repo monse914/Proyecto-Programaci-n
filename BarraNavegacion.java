@@ -12,6 +12,7 @@ public class BarraNavegacion extends JPanel {
     private JButton botonFavorito;
     private JButton botonVerFavoritos;
     private JButton botonOpciones;
+    private JButton botonModo;
     private JPopupMenu menuOpcionesPopup;
 
     private boolean modoOscuro = false;
@@ -20,6 +21,7 @@ public class BarraNavegacion extends JPanel {
     private AccionRecargar accionRecargar;
     private AccionFavorito accionFavorito;
     private AccionMostrarFavoritos accionMostrarFavoritos;
+    private AccionModo accionModo;
 
     public BarraNavegacion() {
         setLayout(new FlowLayout(FlowLayout.CENTER));
@@ -32,6 +34,7 @@ public class BarraNavegacion extends JPanel {
         botonIr = new JButton("Ir");
         botonVerFavoritos = new JButton("Favoritos");
         botonOpciones = new JButton("Opciones");
+        botonModo = new JButton ("Modo");
 
         botonIr.setEnabled(false);
 
@@ -44,6 +47,7 @@ public class BarraNavegacion extends JPanel {
         configurarBotonTexto(botonIr, new Dimension(45, 28));
         configurarBotonTexto(botonVerFavoritos, tamBotonTexto);
         configurarBotonTexto(botonOpciones, tamBotonTexto);
+        configurarBotonTexto(botonModo, tamBotonTexto);
 
         configurarEventos();
         configurarHoverBotones();
@@ -54,6 +58,7 @@ public class BarraNavegacion extends JPanel {
         add(botonIr);
         add(botonVerFavoritos);
         add(botonOpciones);
+        add(botonModo);
 
         aplicarTema(false);
     }
@@ -115,6 +120,12 @@ public class BarraNavegacion extends JPanel {
                 accionMostrarFavoritos.alMostrarFavoritos();
             }
         });
+
+        botonModo.addActionListener(e -> {
+            if (accionModo != null) {
+                accionModo.alModo();
+            }
+        });
     }
 
     private void configurarHoverBotones() {
@@ -123,7 +134,8 @@ public class BarraNavegacion extends JPanel {
                 botonRecargar,
                 botonFavorito,
                 botonVerFavoritos,
-                botonOpciones
+                botonOpciones,
+                botonModo
         };
 
         for (JButton b : botones) {
@@ -218,6 +230,7 @@ public class BarraNavegacion extends JPanel {
         aplicarTemaBoton(botonFavorito);
         aplicarTemaBoton(botonVerFavoritos);
         aplicarTemaBoton(botonOpciones);
+        aplicarTemaBoton(botonModo);
     }
 
     public boolean esURLLocalValida() {
@@ -239,6 +252,10 @@ public class BarraNavegacion extends JPanel {
 
     public void setAccionMostrarFavoritos(AccionMostrarFavoritos accionMostrarFavoritos) {
         this.accionMostrarFavoritos = accionMostrarFavoritos;
+    }
+
+    public void setAccionModo(AccionModo accionModo) {
+        this.accionModo = accionModo;
     }
 
     public void configurarMenuOpciones(MenuSimple menu) {
@@ -285,5 +302,9 @@ public class BarraNavegacion extends JPanel {
 
     public interface AccionMostrarFavoritos {
         void alMostrarFavoritos();
+    }
+
+    public interface AccionModo {
+        void alModo();
     }
 }
