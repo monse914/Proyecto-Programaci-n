@@ -1,0 +1,60 @@
+import java.io.File;
+import java.io.IOException;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+
+public class NavegaOffline {
+
+    private boolean modoOffline;
+
+    public NavegaOffline() {
+        modoOffline = false;
+    }
+
+    public boolean estaEnModoOffline() {
+        return modoOffline;
+    }
+
+    public void cambiarModo() {
+        modoOffline = !modoOffline;
+    }
+
+    public String getNombreModo() {
+        if (modoOffline) {
+            return "Offline";
+        }
+
+        return "Online";
+    }
+
+    public String seleccionarArchivoHTML(JFrame ventana) {
+        JFileChooser selector = new JFileChooser();
+
+        selector.setDialogTitle("Seleccionar página HTML offline");
+
+        int resultado = selector.showOpenDialog(ventana);
+
+        if (resultado == JFileChooser.APPROVE_OPTION) {
+            File archivo = selector.getSelectedFile();
+
+            if (archivo != null && archivo.exists()) {
+                try {
+                    return "file:///" + archivo.getCanonicalPath().replace("\\", "/");
+                } catch (IOException e) {
+                    return null;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public boolean esArchivoHTML(String url) {
+        if (url == null) {
+            return false;
+        }
+
+        return url.toLowerCase().endsWith(".html")
+                || url.toLowerCase().endsWith(".htm");
+    }
+}
