@@ -5,54 +5,51 @@ import javax.net.ssl.SSLSocketFactory;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.zip.GZIPInputStream;
+import java.net.MalformedURLException;
+import java.util.List;
+import java.util.Map;
 
 public class ClienteHTTP {
 
     private String estado = "";
+    private Map<String, List<String>> headers;
+    private String cuerpo = "";
 
     public String obtenerRespuesta(String urlTexto) throws IOException {
 
-        if (!urlTexto.startsWith("http://") &&
-                !urlTexto.startsWith("https://")) {
-
-            urlTexto = "https://" + urlTexto;
-        }
+        validarURLAbsoluta(urlTexto);
 
         StringBuilder respuesta = new StringBuilder();
 
         try {
-
             URL url = new URL(urlTexto);
 
             HttpURLConnection conexion =
                     (HttpURLConnection) url.openConnection();
 
             conexion.setRequestMethod("GET");
-
             conexion.setConnectTimeout(10000);
             conexion.setReadTimeout(10000);
-
             conexion.setInstanceFollowRedirects(true);
 
-            conexion.setRequestProperty(
-                    "User-Agent",
-                    "Mozilla/5.0"
-            );
-
-            conexion.setRequestProperty(
-                    "Accept",
-                    "text/html"
-            );
-
-            conexion.setRequestProperty(
-                    "Accept-Encoding",
-                    "gzip"
-            );
+            conexion.setRequestProperty("User-Agent", "Mozilla/5.0");
+            conexion.setRequestProperty("Accept", "text/html");
+            conexion.setRequestProperty("Accept-Encoding", "gzip");
 
             int codigo = conexion.getResponseCode();
 
-            estado = codigo + " " +
-                    conexion.getResponseMessage();
+            if (codigo == 301 || codigo == 302) {
+
+                String nuevaUrl = conexion.getHeaderField("Location");
+
+                if (nuevaUrl != null && !nuevaUrl.isEmpty()) {
+
+                    return obtenerRespuesta(nuevaUrl);
+                }
+            }
+
+            estado = codigo + " " + conexion.getResponseMessage();
+            headers = conexion.getHeaderFields();
 
             InputStream entrada;
 
@@ -63,19 +60,13 @@ public class ClienteHTTP {
             }
 
             if (entrada == null) {
-                throw new IOException(
-                        "No se recibió respuesta del servidor"
-                );
+                throw new IOException("No se recibió respuesta del servidor");
             }
 
-            String encoding =
-                    conexion.getContentEncoding();
+            String encoding = conexion.getContentEncoding();
 
-            if (encoding != null &&
-                    encoding.equalsIgnoreCase("gzip")) {
-
-                entrada =
-                        new GZIPInputStream(entrada);
+            if (encoding != null && encoding.equalsIgnoreCase("gzip")) {
+                entrada = new GZIPInputStream(entrada);
             }
 
             BufferedReader reader =
@@ -95,21 +86,61 @@ public class ClienteHTTP {
             reader.close();
             conexion.disconnect();
 
-        } catch (SocketTimeoutException e) {
+            cuerpo = respuesta.toString();
 
-            throw new IOException(
-                    "Error: Timeout de conexión"
-            );
+        } catch (SocketTimeoutException e) {
+            estado = "Timeout";
+            throw new IOException("Error: Timeout de conexión");
+
+        } catch (MalformedURLException e) {
+            estado = "URL inválida";
+            throw new IOException("Error: URL inválida");
 
         } catch (IOException e) {
-
-            throw new IOException(
-                    "Error de conexión: " +
-                            e.getMessage()
-            );
+            estado = "Error de conexión";
+            throw new IOException("Error de conexión: " + e.getMessage());
         }
 
-        return respuesta.toString();
+        return cuerpo;
+    }
+
+    private void validarURLAbsoluta(String urlTexto) throws IOException {
+        if (urlTexto == null || urlTexto.trim().isEmpty()) {
+            throw new IOException("Error: URL vacía");
+        }
+
+        urlTexto = urlTexto.trim();
+
+        if (!urlTexto.startsWith("http://") && !urlTexto.startsWith("https://")) {
+            throw new IOException("Error: La URL debe ser absoluta. Ejemplo: https://www.utalca.cl");
+        }
+
+        try {
+            URL url = new URL(urlTexto);
+
+            if (url.getHost() == null || url.getHost().isEmpty()) {
+                throw new IOException("Error: URL sin host");
+            }
+
+            int puerto = url.getPort();
+
+            //if (puerto != ?) {
+                //throw new IOException(
+
+                //);
+            //}
+
+        } catch (MalformedURLException e) {
+            throw new IOException("Error: Formato de URL inválido");
+        }
+    }
+
+    public Map<String, List<String>> getHeaders() {
+        return headers;
+    }
+
+    public String getCuerpo() {
+        return cuerpo;
     }
 
     private String obtenerRespuestaConRedireccion(String url, int redirecciones) throws IOException {
@@ -125,7 +156,7 @@ public class ClienteHTTP {
         String ruta = obtenerRuta(url);
         boolean https = esHttps(url);
 
-        int puerto = https ? 443 : 80;
+        int puerto = 3000;
 
         String statusLine;
         String location = null;
