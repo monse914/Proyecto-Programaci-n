@@ -11,26 +11,25 @@ public class MenuSimple extends JMenuBar {
     private JMenu menuOpciones;
     private JMenuItem modoClaroItem;
     private JMenuItem modoOscuroItem;
+    private Runnable accionHistorial;
     private JMenuItem historialItem;
-    private Ventana ventana;
 
     private CambioTemaListener listener;
-    private Runnable accionHistorial;
 
     public interface CambioTemaListener {
         void alCambiarTema(boolean modoOscuro, Color fondo, Color texto);
     }
 
-    public MenuSimple(JTextPane areaTexto,Ventana ventana, CambioTemaListener listener) {
+    public MenuSimple(JTextPane areaTexto, CambioTemaListener listener, Runnable accionHistorial) {
         this.listener = listener;
         this.accionHistorial = accionHistorial;
-        this.ventana = ventana;
 
         menuOpciones = new JMenu("Opciones");
 
         modoClaroItem = new JMenuItem("Modo claro");
         modoOscuroItem = new JMenuItem("Modo oscuro");
-        historialItem = new JMenuItem("Mostrar Historial");
+        historialItem = new JMenuItem("Ver historial");
+
 
         modoClaroItem.addActionListener(e -> {
             this.modoOscuro = false;
@@ -40,12 +39,6 @@ public class MenuSimple extends JMenuBar {
 
             if (listener != null) {
                 listener.alCambiarTema(this.modoOscuro, colorFondoActual, colorTextoActual);
-            }
-        });
-
-        historialItem.addActionListener(e -> {
-            if (accionHistorial != null) {
-                accionHistorial.run();
             }
         });
 
@@ -59,13 +52,16 @@ public class MenuSimple extends JMenuBar {
                 listener.alCambiarTema(this.modoOscuro, colorFondoActual, colorTextoActual);
             }
         });
-        
+
         historialItem.addActionListener(e -> {
-            ventana.mostrarOcultarHistorial();
+            if (this.accionHistorial != null) {
+                this.accionHistorial.run();
+            }
         });
 
         menuOpciones.add(modoClaroItem);
         menuOpciones.add(modoOscuroItem);
+        menuOpciones.addSeparator();
         menuOpciones.add(historialItem);
         add(menuOpciones);
 
@@ -113,11 +109,13 @@ public class MenuSimple extends JMenuBar {
         modoOscuroItem.setForeground(textoMenu);
         modoOscuroItem.setOpaque(true);
 
-        historialItem.setBackground(fondoItems);
-        historialItem.setForeground(textoMenu);
-        historialItem.setOpaque(true);
-
         repaint();
+
+        if (historialItem != null) {
+            historialItem.setBackground(fondoItems);
+            historialItem.setForeground(textoMenu);
+            historialItem.setOpaque(true);
+        }
     }
 
     private void cambiarColorTexto(JTextPane areaTexto, Color color) {
@@ -141,5 +139,9 @@ public class MenuSimple extends JMenuBar {
 
     public void aplicarTemaActual(JTextPane areaTexto) {
         aplicarTema(areaTexto);
+    }
+
+    public JMenu getMenuOpciones() {
+        return menuOpciones;
     }
 }
