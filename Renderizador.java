@@ -5,6 +5,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.swing.JTextPane;
 import javax.swing.text.*;
+import javax.swing.ImageIcon;
+import java.net.URL;
+import java.net.MalformedURLException;
 
 public class Renderizador {
 
@@ -96,48 +99,109 @@ public class Renderizador {
         String hrefActual = null;
 
         while (matcher.find()) {
+
             String token = matcher.group();
 
             if (token.startsWith("<")) {
+
                 String t = token.trim().toLowerCase();
 
                 if (t.matches("(?is)<h1[^>]*>")) {
+
                     estiloActual = estiloTitulo;
 
                 } else if (t.matches("(?is)</h1>")) {
+
                     insertar(doc, "\n\n", estiloNormal);
                     estiloActual = estiloNormal;
 
+                } else if (t.matches("(?is)<h2[^>]*>")) {
+
+                    estiloActual = crearEstiloH2();
+
+                } else if (t.matches("(?is)</h2>")) {
+
+                    insertar(doc, "\n\n", estiloNormal);
+                    estiloActual = estiloNormal;
+
+                } else if (t.matches("(?is)<h3[^>]*>")) {
+
+                    estiloActual = crearEstiloH3();
+
+                } else if (t.matches("(?is)</h3>")) {
+
+                    insertar(doc, "\n\n", estiloNormal);
+                    estiloActual = estiloNormal;
+
+                } else if (t.matches("(?is)<h4[^>]*>")) {
+
+                    estiloActual = crearEstiloH4();
+
+                } else if (t.matches("(?is)</h4>")) {
+
+                    insertar(doc, "\n\n", estiloNormal);
+                    estiloActual = estiloNormal;
+
+                } else if (t.matches("(?is)<b[^>]*>")) {
+
+                    estiloActual = crearEstiloBold();
+
+                } else if (t.matches("(?is)</b>")) {
+
+                    estiloActual = estiloNormal;
+
+                } else if (t.matches("(?is)<strong[^>]*>")) {
+
+                    estiloActual = crearEstiloBold();
+
+                } else if (t.matches("(?is)</strong>")) {
+
+                    estiloActual = estiloNormal;
+
+                } else if (t.matches("(?is)<i[^>]*>")) {
+
+                    estiloActual = crearEstiloItalic();
+
+                } else if (t.matches("(?is)</i>")) {
+
+                    estiloActual = estiloNormal;
+
                 } else if (t.matches("(?is)<p[^>]*>")) {
+
                     estiloActual = estiloParrafo;
 
                 } else if (t.matches("(?is)</p>")) {
+
                     insertar(doc, "\n\n", estiloNormal);
                     estiloActual = estiloNormal;
 
                 } else if (t.matches("(?is)<a\\b[^>]*>")) {
+
                     hrefActual = extraerHref(token, carpetaBase);
 
                 } else if (t.matches("(?is)</a>")) {
+
                     hrefActual = null;
 
                 } else if (t.matches("(?is)<br\\s*/?>")) {
+
                     insertar(doc, "\n", estiloActual);
 
                 } else if (t.matches("(?is)<li[^>]*>")) {
+
                     insertar(doc, "• ", estiloNormal);
 
                 } else if (t.matches("(?is)</li>")) {
+
                     insertar(doc, "\n", estiloNormal);
 
                 } else if (t.matches("(?is)</ul>|</ol>|</div>|</span>|</table>|</tr>|</td>")) {
+
                     insertar(doc, "\n", estiloNormal);
 
                 } else if (t.matches("(?is)<img\\b[^>]*>")) {
-                    String alt = extraerAlt(token);
-                    if (alt != null && !alt.trim().isEmpty()) {
-                        insertar(doc, decodificarTextoVisible(alt), estiloNormal);
-                    }
+
+                    insertarImagen(doc, token, carpetaBase, estiloNormal);
                 }
             } else {
                 String texto = decodificarTextoNormal(token);
@@ -164,6 +228,61 @@ public class Renderizador {
         SimpleAttributeSet estilo = new SimpleAttributeSet();
         StyleConstants.setFontSize(estilo, 22);
         StyleConstants.setBold(estilo, true);
+        return estilo;
+    }
+
+    private SimpleAttributeSet crearEstiloH2() {
+
+        SimpleAttributeSet estilo =
+                new SimpleAttributeSet();
+
+        StyleConstants.setFontSize(estilo, 20);
+        StyleConstants.setBold(estilo, true);
+
+        return estilo;
+    }
+
+    private SimpleAttributeSet crearEstiloH3() {
+
+        SimpleAttributeSet estilo =
+                new SimpleAttributeSet();
+
+        StyleConstants.setFontSize(estilo, 18);
+        StyleConstants.setBold(estilo, true);
+
+        return estilo;
+    }
+
+    private SimpleAttributeSet crearEstiloH4() {
+
+        SimpleAttributeSet estilo =
+                new SimpleAttributeSet();
+
+        StyleConstants.setFontSize(estilo, 16);
+        StyleConstants.setBold(estilo, true);
+
+        return estilo;
+    }
+
+    private SimpleAttributeSet crearEstiloBold() {
+
+        SimpleAttributeSet estilo =
+                new SimpleAttributeSet();
+
+        StyleConstants.setBold(estilo, true);
+        StyleConstants.setFontSize(estilo, 14);
+
+        return estilo;
+    }
+
+    private SimpleAttributeSet crearEstiloItalic() {
+
+        SimpleAttributeSet estilo =
+                new SimpleAttributeSet();
+
+        StyleConstants.setItalic(estilo, true);
+        StyleConstants.setFontSize(estilo, 14);
+
         return estilo;
     }
 
@@ -404,5 +523,85 @@ public class Renderizador {
             this.fin = fin;
             this.ruta = ruta;
         }
+    }
+
+    private void insertarImagen(StyledDocument doc, String tag, File carpetaBase, AttributeSet estiloNormal) {
+        try {
+            String src = extraerSrc(tag);
+
+            if (src == null || src.trim().isEmpty()) {
+                String alt = extraerAlt(tag);
+                if (alt != null && !alt.trim().isEmpty()) {
+                    insertar(doc, decodificarTextoVisible(alt), estiloNormal);
+                }
+                return;
+            }
+
+            File archivoImagen = resolverArchivoImagen(carpetaBase, src);
+
+            if (!archivoImagen.exists() || !archivoImagen.isFile()) {
+                String alt = extraerAlt(tag);
+                if (alt != null && !alt.trim().isEmpty()) {
+                    insertar(doc, decodificarTextoVisible(alt), estiloNormal);
+                }
+                return;
+            }
+
+            String nombre = archivoImagen.getName().toLowerCase();
+
+            if (!nombre.endsWith(".png") && !nombre.endsWith(".bmp")) {
+                insertar(doc, "[Imagen no soportada: " + archivoImagen.getName() + "]", estiloNormal);
+                return;
+            }
+
+            ImageIcon icono = new ImageIcon(archivoImagen.getAbsolutePath());
+
+            if (icono.getIconWidth() <= 0) {
+                insertar(doc, "[No se pudo cargar la imagen]", estiloNormal);
+                return;
+            }
+
+            Style estilo = doc.addStyle("imagen_" + doc.getLength(), null);
+            StyleConstants.setIcon(estilo, icono);
+
+            doc.insertString(doc.getLength(), " ", estilo);
+            insertar(doc, "\n", estiloNormal);
+
+        } catch (Exception e) {
+            insertar(doc, "[Error al cargar imagen]", estiloNormal);
+        }
+    }
+
+    private String extraerSrc(String tag) {
+        Pattern p = Pattern.compile("(?is)src\\s*=\\s*\"(.*?)\"");
+        Matcher m = p.matcher(tag);
+
+        if (m.find()) {
+            return m.group(1).trim();
+        }
+
+        p = Pattern.compile("(?is)src\\s*=\\s*'(.*?)'");
+        m = p.matcher(tag);
+
+        if (m.find()) {
+            return m.group(1).trim();
+        }
+
+        return null;
+    }
+
+    private File resolverArchivoImagen(File carpetaBase, String src) throws IOException {
+        if (src.startsWith("file:///")) {
+            String ruta = src.substring(8);
+            return new File(ruta);
+        }
+
+        File archivo = new File(src);
+
+        if (archivo.isAbsolute()) {
+            return archivo;
+        }
+
+        return new File(carpetaBase, src).getCanonicalFile();
     }
 }
