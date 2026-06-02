@@ -60,7 +60,7 @@ public class Ventana extends JFrame {
 
         setUndecorated(true);
         setSize(800, 600);
-        setMinimumSize(new Dimension(200, 200));
+        setMinimumSize(new Dimension(400, 300));
         setLayout(new BorderLayout());
         setLocationRelativeTo(null);
 
@@ -309,6 +309,10 @@ public class Ventana extends JFrame {
 
         aplicarTemaArea(pestania.getAreaContenido());
         actualizarEstrellaFavorito(pestania);
+
+        if (menu != null) {
+            pestania.getBarraNavegacion().configurarMenuOpciones(menu);
+        }
     }
 
 
@@ -515,9 +519,6 @@ public class Ventana extends JFrame {
 
         mostrarEstadoCargando();
 
-        barraProgreso.setVisible(true);
-        barraProgreso.setIndeterminate(true);
-
         String finalUrl = urlMostrada;
 
         SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
@@ -529,9 +530,6 @@ public class Ventana extends JFrame {
 
             @Override
             protected void done() {
-
-                barraProgreso.setIndeterminate(false);
-                barraProgreso.setVisible(false);
 
                 try {
 
@@ -560,9 +558,11 @@ public class Ventana extends JFrame {
 
                     barraEstado.setText(" " + estado);
 
-                    historial.agregar(finalUrl, finalUrl);
+                    String tituloPagina = obtenerTituloDesdeHTML(html, finalUrl);
 
-                    actualizarTituloPestana(pestania, finalUrl);
+                    historial.agregar(finalUrl, tituloPagina);
+
+                    actualizarTituloPestana(pestania, tituloPagina);
 
                     actualizarEstrellaFavorito(pestania);
 
@@ -595,12 +595,7 @@ public class Ventana extends JFrame {
 
         mostrarEstadoCargando();
 
-        barraProgreso.setVisible(true);
-        barraProgreso.setIndeterminate(true);
-
         Timer timer = new Timer(350, e -> {
-            barraProgreso.setIndeterminate(false);
-            barraProgreso.setVisible(false);
 
             try {
                 String ruta = obtenerRutaArchivo(urlNormalizada);
@@ -702,6 +697,7 @@ public class Ventana extends JFrame {
 
     private void mostrarEstadoCargando() {
         barraEstado.setText(" Cargando...");
+        barraProgreso.setVisible(false);
     }
 
     private void agregarPestana(String titulo, Pestania pestania, String url) {
@@ -723,21 +719,24 @@ public class Ventana extends JFrame {
         btnNuevaPestana = new JButton("+");
 
         aplicarEstiloBotonIcono(btnNuevaPestana);
-
-        btnNuevaPestana.setPreferredSize(
-                new Dimension(38, 22)
-        );
-
-        btnNuevaPestana.setMinimumSize(
-                new Dimension(38, 22)
-        );
-
-        btnNuevaPestana.setMaximumSize(
-                new Dimension(38, 22)
-        );
-
         btnNuevaPestana.setOpaque(true);
         btnNuevaPestana.setContentAreaFilled(true);
+        btnNuevaPestana.setBackground(Color.WHITE);
+
+        btnNuevaPestana.setPreferredSize(
+                new Dimension(28, 22)
+        );
+
+        btnNuevaPestana.setFont(
+                btnNuevaPestana.getFont().deriveFont(
+                        Font.BOLD,
+                        14f
+                )
+        );
+
+        btnNuevaPestana.setMargin(
+                new Insets(-1, 0, 0, 0)
+        );
 
         btnNuevaPestana.setBackground(Color.WHITE);
         btnNuevaPestana.setForeground(Color.BLACK);
@@ -750,23 +749,12 @@ public class Ventana extends JFrame {
                                 true
                         ),
                         BorderFactory.createEmptyBorder(
-                                2,
-                                6,
-                                2,
-                                6
+                                1,
+                                5,
+                                1,
+                                5
                         )
                 )
-        );
-
-        btnNuevaPestana.setFont(
-                btnNuevaPestana.getFont().deriveFont(
-                        Font.PLAIN,
-                        16f
-                )
-        );
-
-        btnNuevaPestana.setMargin(
-                new Insets(-2, 0, 0, 0)
         );
 
         btnNuevaPestana.addMouseListener(
@@ -861,7 +849,7 @@ public class Ventana extends JFrame {
 
         panel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(210,210,210), 1, true),
-                BorderFactory.createEmptyBorder(0, 8, 0, 4)
+                BorderFactory.createEmptyBorder(0, 10, 0, 2)
         ));
 
         boolean seleccionada = pestanas.getSelectedComponent() == componentePestana;
@@ -882,6 +870,10 @@ public class Ventana extends JFrame {
 
         JButton btnCerrar = new JButton("×");
         aplicarEstiloBotonIcono(btnCerrar);
+        btnCerrar.setPreferredSize(new Dimension(16, 16));
+        btnCerrar.setMargin(new Insets(-3,0,0,0));
+        btnCerrar.setVerticalAlignment(SwingConstants.CENTER);
+        btnCerrar.setHorizontalAlignment(SwingConstants.CENTER);
         btnCerrar.setFont(
                 btnCerrar.getFont().deriveFont(15f)
         );
@@ -920,7 +912,11 @@ public class Ventana extends JFrame {
         return panel;
     }
 
+
+    // Para limitar las pestañas
+
     private void crearNuevaPestanaVacia() {
+
         Pestania nueva = new Pestania();
         configurarPestania(nueva);
 
@@ -1188,6 +1184,31 @@ public class Ventana extends JFrame {
         dialogo.pack();
         dialogo.setLocationRelativeTo(this);
         dialogo.setVisible(true);
+    }
+
+    private String obtenerTituloDesdeHTML(String html, String url) {
+        try {
+            String lower = html.toLowerCase();
+
+            int inicio = lower.indexOf("<title>");
+            int fin = lower.indexOf("</title>");
+
+            if (inicio != -1 && fin != -1 && fin > inicio) {
+                String titulo = html.substring(inicio + 7, fin).trim();
+
+                titulo = titulo.replace("&amp;", "&");
+                titulo = titulo.replace("&lt;", "<");
+                titulo = titulo.replace("&gt;", ">");
+                titulo = titulo.replace("&quot;", "\"");
+
+                if (!titulo.isEmpty()) {
+                    return titulo;
+                }
+            }
+        } catch (Exception e) {
+        }
+
+        return url;
     }
 
     private void abrirSeleccionHistorial(
