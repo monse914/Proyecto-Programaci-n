@@ -18,14 +18,20 @@ public class ClienteHTTP {
     public String obtenerRespuesta(String urlTexto) throws IOException {
 
         validarURLAbsoluta(urlTexto);
+        URL url = new URL(urlTexto);
+        int puerto = url.getPort();
+        if (puerto == -1) {
+            puerto = url.getProtocol().equalsIgnoreCase("https")? 443 : 80;
+        }
+        if (puerto != 80 && puerto != 8080 && puerto != 443 && puerto != 3000 && puerto != 5173) {
+            JOptionPane.showMessageDialog(null, "Conexión a puerto " + puerto + " no soportada.");
+            throw new IOException("Conexión a puerto " + puerto + " no soportada");
+        }
 
         StringBuilder respuesta = new StringBuilder();
 
         try {
-            URL url = new URL(urlTexto);
-
-            HttpURLConnection conexion =
-                    (HttpURLConnection) url.openConnection();
+            HttpURLConnection conexion = (HttpURLConnection) url.openConnection();
 
             conexion.setRequestMethod("GET");
             conexion.setConnectTimeout(10000);
@@ -39,11 +45,8 @@ public class ClienteHTTP {
             int codigo = conexion.getResponseCode();
 
             if (codigo == 301 || codigo == 302) {
-
                 String nuevaUrl = conexion.getHeaderField("Location");
-
                 if (nuevaUrl != null && !nuevaUrl.isEmpty()) {
-
                     return obtenerRespuesta(nuevaUrl);
                 }
             }
@@ -69,13 +72,7 @@ public class ClienteHTTP {
                 entrada = new GZIPInputStream(entrada);
             }
 
-            BufferedReader reader =
-                    new BufferedReader(
-                            new InputStreamReader(
-                                    entrada,
-                                    "UTF-8"
-                            )
-                    );
+            BufferedReader reader = new BufferedReader(new InputStreamReader(entrada,"UTF-8"));
 
             String line;
 
@@ -122,14 +119,6 @@ public class ClienteHTTP {
                 throw new IOException("Error: URL sin host");
             }
 
-            int puerto = url.getPort();
-
-            //if (puerto != ?) {
-                //throw new IOException(
-
-                //);
-            //}
-
         } catch (MalformedURLException e) {
             throw new IOException("Error: Formato de URL inválido");
         }
@@ -143,6 +132,11 @@ public class ClienteHTTP {
         return cuerpo;
     }
 
+    public String getEstado() {
+        return estado;
+    }
+
+/*
     private String obtenerRespuestaConRedireccion(String url, int redirecciones) throws IOException {
         if (redirecciones > 5) {
             throw new IOException("Error: Demasiadas redirecciones");
@@ -221,10 +215,6 @@ public class ClienteHTTP {
             estado = "Error de conexión";
             throw new IOException("Error de conexión: " + e.getMessage());
         }
-    }
-
-    public String getEstado() {
-        return estado;
     }
 
     private Socket crearSocket(String host, int puerto, boolean https) throws IOException {
@@ -382,5 +372,5 @@ public class ClienteHTTP {
         }
 
         return url;
-    }
+    } */
 }
