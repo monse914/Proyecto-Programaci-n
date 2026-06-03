@@ -12,9 +12,11 @@ import java.net.MalformedURLException;
 public class Renderizador {
 
     private Map<JTextPane, List<EnlaceInfo>> enlacesPorArea;
-
+    private Map<JTextPane, List<NoRend>> noRendPorArea;
+    
     public Renderizador() {
         enlacesPorArea = new HashMap<>();
+        noRendPorArea = new HashMap<>();
     }
 
     public void renderizarArchivo(String ruta, JTextPane areaContenido) throws IOException {
@@ -31,6 +33,7 @@ public class Renderizador {
 
         areaContenido.setText("");
         enlacesPorArea.put(areaContenido, new ArrayList<>());
+        noRendPorArea.put(areaContenido, new ArrayList<>());
 
         StyledDocument doc = areaContenido.getStyledDocument();
 
@@ -95,6 +98,7 @@ public class Renderizador {
         Matcher matcher = patron.matcher(html);
 
         SimpleAttributeSet estiloNormal = crearEstiloNormal();
+        SimpleAttributeSet estiloNoRender = crearEstiloNoRender();
         SimpleAttributeSet estiloTitulo = crearEstiloTitulo();
         SimpleAttributeSet estiloParrafo = crearEstiloParrafo();
 
@@ -205,6 +209,11 @@ public class Renderizador {
                 } else if (t.matches("(?is)<img\\b[^>]*>")) {
 
                     insertarImagen(doc, token, carpetaBase, estiloNormal);
+                }  else {
+                    int inicio = doc.getLength();
+                    insertar(doc,"[Este elemento no se puede renderizar: " + t + " ]\n",estiloNoRender);
+                    int fin = doc.getLength();
+                    noRendPorArea.get(area).add(new NoRend(inicio, fin, ""));
                 }
             } else {
                 String texto = decodificarTextoNormal(token);
@@ -227,6 +236,13 @@ public class Renderizador {
         return estilo;
     }
 
+    private SimpleAttributeSet crearEstiloNoRender() {
+        SimpleAttributeSet estilo = new SimpleAttributeSet();
+        StyleConstants.setFontSize(estilo, 14);
+        StyleConstants.setForeground(estilo, Color.RED);
+        return estilo;
+    }
+
     private SimpleAttributeSet crearEstiloTitulo() {
         SimpleAttributeSet estilo = new SimpleAttributeSet();
         StyleConstants.setFontSize(estilo, 22);
@@ -236,9 +252,7 @@ public class Renderizador {
 
     private SimpleAttributeSet crearEstiloH2() {
 
-        SimpleAttributeSet estilo =
-                new SimpleAttributeSet();
-
+        SimpleAttributeSet estilo = new SimpleAttributeSet();
         StyleConstants.setFontSize(estilo, 20);
         StyleConstants.setBold(estilo, true);
 
@@ -247,9 +261,7 @@ public class Renderizador {
 
     private SimpleAttributeSet crearEstiloH3() {
 
-        SimpleAttributeSet estilo =
-                new SimpleAttributeSet();
-
+        SimpleAttributeSet estilo = new SimpleAttributeSet();
         StyleConstants.setFontSize(estilo, 18);
         StyleConstants.setBold(estilo, true);
 
@@ -258,9 +270,7 @@ public class Renderizador {
 
     private SimpleAttributeSet crearEstiloH4() {
 
-        SimpleAttributeSet estilo =
-                new SimpleAttributeSet();
-
+        SimpleAttributeSet estilo = new SimpleAttributeSet();
         StyleConstants.setFontSize(estilo, 16);
         StyleConstants.setBold(estilo, true);
 
@@ -269,9 +279,7 @@ public class Renderizador {
 
     private SimpleAttributeSet crearEstiloBold() {
 
-        SimpleAttributeSet estilo =
-                new SimpleAttributeSet();
-
+        SimpleAttributeSet estilo = new SimpleAttributeSet();
         StyleConstants.setBold(estilo, true);
         StyleConstants.setFontSize(estilo, 14);
 
@@ -280,9 +288,7 @@ public class Renderizador {
 
     private SimpleAttributeSet crearEstiloItalic() {
 
-        SimpleAttributeSet estilo =
-                new SimpleAttributeSet();
-
+        SimpleAttributeSet estilo = new SimpleAttributeSet();
         StyleConstants.setItalic(estilo, true);
         StyleConstants.setFontSize(estilo, 14);
 
@@ -448,6 +454,20 @@ public class Renderizador {
         }
     }
 
+    public void aplicarTemaNoRender(JTextPane area){
+        StyledDocument doc = area.getStyledDocument();
+        List<NoRend> noRend = noRendPorArea.get(area);
+        if (noRend == null) {
+            return;
+        }
+        for (NoRend e : noRend) {
+            SimpleAttributeSet estilo = new SimpleAttributeSet();
+            StyleConstants.setFontSize(estilo, 14);
+            StyleConstants.setForeground(estilo, Color.RED);
+            doc.setCharacterAttributes(e.inicio, e.fin - e.inicio, estilo, false);
+        }
+    }
+
     public void aplicarTemaEnlaces(JTextPane area, boolean modoOscuro) {
         StyledDocument doc = area.getStyledDocument();
         List<EnlaceInfo> enlaces = enlacesPorArea.get(area);
@@ -486,7 +506,7 @@ public class Renderizador {
         StyleConstants.setFontSize(estiloTexto, 14);
 
         doc.setCharacterAttributes(0, doc.getLength(), estiloTexto, false);
-
+        aplicarTemaNoRender(area);
         aplicarTemaEnlaces(area, modoOscuro);
     }
 
@@ -524,6 +544,20 @@ public class Renderizador {
         EnlaceInfo(int inicio, int fin, String ruta) {
             this.inicio = inicio;
             this.fin = fin;
+            this.ruta = ruta;
+        }
+    }
+
+    private static class NoRend {
+        int inicio;
+        int fin;
+        String ruta;
+        NoRend(int inicio, int fin, String ruta) {
+            this.inicio = inicio;
+            this.inicio = inicio;
+            this.fin = fin;
+            this.fin = fin;
+            this.ruta = ruta;
             this.ruta = ruta;
         }
     }
