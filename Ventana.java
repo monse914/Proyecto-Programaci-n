@@ -448,7 +448,7 @@ public class Ventana extends JFrame {
 
         url = url.trim();
 
-        if (!url.startsWith("file:///")) {
+        if(esDireccionWeb(url)) {
             cargarPaginaWebEnPestania(pestania, url);
             return;
         }
@@ -534,6 +534,7 @@ public class Ventana extends JFrame {
                 try {
 
                     String html = get();
+                    System.out.println(html.substring(0, Math.min(html.length(), 500)));
 
                     JTextPane area = pestania.getAreaContenido();
 
@@ -911,9 +912,6 @@ public class Ventana extends JFrame {
 
         return panel;
     }
-
-
-    // Para limitar las pestañas
 
     private void crearNuevaPestanaVacia() {
 
@@ -1569,4 +1567,25 @@ public class Ventana extends JFrame {
             i--;
         }
     }
+    
+    private boolean esDominio(String texto) {
+        return texto.matches("^(www\\.)?[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)+(:[0-9]{1,5})?$");
+    }
+
+    private boolean esIP(String texto) {
+        return texto.matches("^((25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})\\.){3}" + "(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})$");
+    }
+
+    private boolean esIPmasPuerto(String texto){
+        return texto.matches("^((25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})\\.){3}" + "(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2}):[0-9]{1,5}$");
+    }
+    
+    private boolean esDireccionWeb(String texto) {
+        return texto.startsWith("http://")
+                || texto.startsWith("https://")
+                || esDominio(texto)
+                || esIP(texto)
+                || esIPmasPuerto(texto);
+            }
+
 }
