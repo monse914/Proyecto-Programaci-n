@@ -107,6 +107,7 @@ public class Pestania extends JPanel {
             for (javax.swing.event.HyperlinkListener hl : areaContenido.getHyperlinkListeners()) {
                 areaContenido.removeHyperlinkListener(hl);
             }
+
         }
 
         if (barraNavegacion != null) {
@@ -114,7 +115,10 @@ public class Pestania extends JPanel {
             barraNavegacion.setAccionRecargar(null);
             barraNavegacion.setAccionFavorito(null);
             barraNavegacion.setAccionMostrarFavoritos(null);
+            barraNavegacion.setAccionModo(null);
             barraNavegacion.setURL("");
+            barraNavegacion.setAccionAtras(null);
+            barraNavegacion.setAccionAdelante(null);
         }
 
         if (scrollContenido != null) {
@@ -159,5 +163,13 @@ public class Pestania extends JPanel {
         }
 
         return urlActual;
+    }
+
+    public boolean puedeAtras() {
+        return indice > 0;
+    }
+
+    public boolean puedeAdelante() {
+        return indice < historial.size() - 1;
     }
 }
