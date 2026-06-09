@@ -20,6 +20,7 @@ public class Ventana extends JFrame {
     private ClienteHTTP clienteHTTP;
     private Historial historial;
     private Favoritos favoritos;
+    private NavegaOffline navegaOffline;
 
     private JPanel panelSuperior;
     private JPanel barraTitulo;
@@ -68,6 +69,7 @@ public class Ventana extends JFrame {
         clienteHTTP = new ClienteHTTP();
         historial = new Historial();
         favoritos = new Favoritos();
+        navegaOffline = new NavegaOffline();
 
         pestanasPorUrl = new HashMap<>();
         etiquetasPestanas = new HashMap<>();
@@ -117,6 +119,8 @@ public class Ventana extends JFrame {
         barraHist.setOpaque(false);
         btnAtras = new JButton("🡠");
         btnAdelante = new JButton("🡢");
+        btnAtras.setEnabled(false);
+        btnAdelante.setEnabled(false);
         JButton[] botonesP = {btnAtras,btnAdelante};
         for (JButton bp : botonesP) {
             bp.setFocusPainted(false);
@@ -132,6 +136,7 @@ public class Ventana extends JFrame {
                 String url = p.atras();
                 if (url != null) {
                     navegarEnPestaniaActual(p, url);
+                    actualizarBotonesNavegacion();
                 }
             }
         });
@@ -142,6 +147,7 @@ public class Ventana extends JFrame {
                 String url = p.adelante();
                 if (url != null) {
                     navegarEnPestaniaActual(p, url);
+                    actualizarBotonesNavegacion();
                 }
             }
         });
@@ -313,8 +319,91 @@ public class Ventana extends JFrame {
         if (menu != null) {
             pestania.getBarraNavegacion().configurarMenuOpciones(menu);
         }
+
+        pestania.getBarraNavegacion().setAccionModo(() -> {
+            cambiarModoNavegacion(pestania);
+        });
+
+        pestania.getBarraNavegacion().setAccionAtras(() -> {
+            String url = pestania.atras();
+
+            if (url != null) {
+                navegarEnPestaniaActual(pestania, url);
+            }
+
+            actualizarBotonesHistorial(pestania);
+        });
+
+        pestania.getBarraNavegacion().setAccionAdelante(() -> {
+            String url = pestania.adelante();
+
+            if (url != null) {
+                navegarEnPestaniaActual(pestania, url);
+            }
+
+            actualizarBotonesHistorial(pestania);
+        });
     }
 
+    private void actualizarBotonesHistorial(Pestania pestania) {
+        if (pestania == null) {
+            return;
+        }
+
+        pestania.getBarraNavegacion().actualizarBotonesHistorial(
+                pestania.puedeAtras(),
+                pestania.puedeAdelante()
+        );
+    }
+
+    private void cambiarModoNavegacion(Pestania pestania) {
+
+        navegaOffline.cambiarModo();
+        actualizarTextoBotonesModo();
+
+        if (navegaOffline.estaEnModoOffline()) {
+
+            barraEstado.setText(" Modo Offline");
+
+            String archivo = navegaOffline.seleccionarArchivoHTML(this);
+
+            if (archivo == null) {
+                return;
+            }
+
+            if (!navegaOffline.esArchivoHTML(archivo)) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "En modo offline solo se permiten archivos HTML."
+                );
+                return;
+            }
+
+            pestania.getBarraNavegacion().setURL(archivo);
+            navegarEnPestaniaActual(pestania, archivo);
+
+        } else {
+
+            barraEstado.setText(" Modo Online");
+        }
+    }
+
+    private void actualizarTextoBotonesModo() {
+        int i = 0;
+
+        while (i < pestanas.getTabCount()) {
+            Component comp = pestanas.getComponentAt(i);
+
+            if (comp instanceof Pestania) {
+                Pestania p = (Pestania) comp;
+                p.getBarraNavegacion().setTextoModo(
+                        navegaOffline.estaEnModoOffline()
+                );
+            }
+
+            i++;
+        }
+    }
 
     private void cambiarFavorito(Pestania pestania) {
         String url = pestania.getUrlActual();
@@ -448,7 +537,23 @@ public class Ventana extends JFrame {
 
         url = url.trim();
 
-        if(esDireccionWeb(url)) {
+        if (navegaOffline.estaEnModoOffline()) {
+
+            if (!url.startsWith("file:///")) {
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Estás en modo offline. Solo puedes abrir archivos HTML del computador."
+                );
+
+                return;
+            }
+
+            cargarPaginaEnComponente(url, pestania);
+            return;
+        }
+
+        if (!url.startsWith("file:///")) {
             cargarPaginaWebEnPestania(pestania, url);
             return;
         }
@@ -510,12 +615,13 @@ public class Ventana extends JFrame {
         if (!urlMostrada.startsWith("http://")
                 && !urlMostrada.startsWith("https://")) {
 
-            urlMostrada = "https://" + urlMostrada;
+            urlMostrada = "http://" + urlMostrada;
         }
-
         pestania.setUrlActual(urlMostrada);
         pestania.getBarraNavegacion().setURL(urlMostrada);
         pestania.navegar(urlMostrada);
+        actualizarBotonesHistorial(pestania);
+        actualizarBotonesNavegacion();
 
         mostrarEstadoCargando();
 
@@ -534,7 +640,6 @@ public class Ventana extends JFrame {
                 try {
 
                     String html = get();
-                    System.out.println(html.substring(0, Math.min(html.length(), 500)));
 
                     JTextPane area = pestania.getAreaContenido();
 
@@ -573,16 +678,25 @@ public class Ventana extends JFrame {
 
                     area.setContentType("text/plain");
 
+                    String mensaje = e.getMessage();
+
+                    if (mensaje == null || mensaje.trim().isEmpty()) {
+                        mensaje = "Error de conexión";
+                    }
+
+                    if (mensaje.startsWith("java.io.IOException: ")) {
+                        mensaje = mensaje.substring("java.io.IOException: ".length());
+                    }
+
                     area.setText(
-                            "Error de conexión:\n"
-                                    + "La página no respondió en 10 segundos."
+                            "Error de conexión:\n" + mensaje
                     );
 
-                    barraEstado.setText(" Error de conexión");
+                    barraEstado.setText(" " + mensaje);
 
                     JOptionPane.showMessageDialog(
                             Ventana.this,
-                            "Error de conexión"
+                            mensaje
                     );
                 }
             }
@@ -625,6 +739,9 @@ public class Ventana extends JFrame {
                 urlPorPestana.put(pestania, urlNormalizada);
 
                 pestania.setUrlActual(urlNormalizada);
+                pestania.navegar(urlNormalizada);
+                actualizarBotonesNavegacion();
+                actualizarBotonesHistorial(pestania);
                 pestania.getBarraNavegacion().setURL(urlNormalizada);
 
                 actualizarEstrellaFavorito(pestania);
@@ -912,6 +1029,9 @@ public class Ventana extends JFrame {
 
         return panel;
     }
+
+
+    // Para limitar las pestañas
 
     private void crearNuevaPestanaVacia() {
 
@@ -1567,7 +1687,6 @@ public class Ventana extends JFrame {
             i--;
         }
     }
-    
     private boolean esDominio(String texto) {
         return texto.matches("^(www\\.)?[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)+(:[0-9]{1,5})?$");
     }
@@ -1579,13 +1698,38 @@ public class Ventana extends JFrame {
     private boolean esIPmasPuerto(String texto){
         return texto.matches("^((25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})\\.){3}" + "(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2}):[0-9]{1,5}$");
     }
-    
+
     private boolean esDireccionWeb(String texto) {
         return texto.startsWith("http://")
                 || texto.startsWith("https://")
                 || esDominio(texto)
                 || esIP(texto)
                 || esIPmasPuerto(texto);
-            }
+    }
 
+    private void actualizarEstadoModo() {
+        if (navegaOffline.estaEnModoOffline()) {
+            barraEstado.setText(" Modo Offline");
+        } else {
+            barraEstado.setText(" Modo Online");
+        }
+    }
+
+    private void actualizarBotonesNavegacion() {
+
+        Component comp = pestanas.getSelectedComponent();
+
+        if (comp instanceof Pestania) {
+
+            Pestania p = (Pestania) comp;
+
+            btnAtras.setEnabled(p.puedeAtras());
+            btnAdelante.setEnabled(p.puedeAdelante());
+
+        } else {
+
+            btnAtras.setEnabled(false);
+            btnAdelante.setEnabled(false);
+        }
+    }
 }
