@@ -137,7 +137,15 @@ public class Pestania extends JPanel {
     }
 
     public void navegar(String url) {
+        if (url == null || url.trim().isEmpty()) {
+            return;
+        }
+
         urlActual = url;
+
+        if (indice >= 0 && historial.get(indice).equals(url)) {
+            return;
+        }
 
         if (indice < historial.size() - 1) {
             historial = new ArrayList<>(historial.subList(0, indice + 1));
