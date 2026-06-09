@@ -57,4 +57,28 @@ public class NavegaOffline {
         return url.toLowerCase().endsWith(".html")
                 || url.toLowerCase().endsWith(".htm");
     }
+
+    public String convertirRutaAFileURL(String texto) {
+        if (texto == null || texto.trim().isEmpty()) {
+            return null;
+        }
+
+        texto = texto.trim();
+
+        if (texto.startsWith("file:///")) {
+            return texto;
+        }
+
+        File archivo = new File(texto);
+
+        if (archivo.exists() && archivo.isFile()) {
+            try {
+                return "file:///" + archivo.getCanonicalPath().replace("\\", "/");
+            } catch (IOException e) {
+                return null;
+            }
+        }
+
+        return null;
+    }
 }
