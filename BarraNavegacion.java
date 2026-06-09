@@ -14,6 +14,8 @@ public class BarraNavegacion extends JPanel {
     private JButton botonOpciones;
     private JButton botonModo;
     private JPopupMenu menuOpcionesPopup;
+    private JButton botonAtras;
+    private JButton botonAdelante;
 
     private boolean modoOscuro = false;
 
@@ -22,6 +24,8 @@ public class BarraNavegacion extends JPanel {
     private AccionFavorito accionFavorito;
     private AccionMostrarFavoritos accionMostrarFavoritos;
     private AccionModo accionModo;
+    private AccionAtras accionAtras;
+    private AccionAdelante accionAdelante;
 
     public BarraNavegacion() {
         setLayout(new FlowLayout(FlowLayout.CENTER));
@@ -29,12 +33,14 @@ public class BarraNavegacion extends JPanel {
         campoURL = new JTextField(40);
         campoURL.setPreferredSize(new Dimension(500, 28));
 
+        botonAtras = new JButton("←");
+        botonAdelante = new JButton("→");
         botonRecargar = new JButton("↻");
         botonFavorito = new JButton("☆");
         botonIr = new JButton("Ir");
         botonVerFavoritos = new JButton("Favoritos");
         botonOpciones = new JButton("Opciones");
-        botonModo = new JButton ("Modo");
+        botonModo = new JButton ("Modo Offline");
 
         botonIr.setEnabled(false);
 
@@ -47,11 +53,18 @@ public class BarraNavegacion extends JPanel {
         configurarBotonTexto(botonIr, new Dimension(45, 28));
         configurarBotonTexto(botonVerFavoritos, tamBotonTexto);
         configurarBotonTexto(botonOpciones, tamBotonTexto);
-        configurarBotonTexto(botonModo, tamBotonTexto);
+
+        configurarBotonIcono(botonAtras);
+        configurarBotonIcono(botonAdelante);
+
+        botonAtras.setEnabled(false);
+        botonAdelante.setEnabled(false);
 
         configurarEventos();
         configurarHoverBotones();
 
+        add(botonAtras);
+        add(botonAdelante);
         add(botonRecargar);
         add(botonFavorito);
         add(campoURL);
@@ -124,6 +137,18 @@ public class BarraNavegacion extends JPanel {
         botonModo.addActionListener(e -> {
             if (accionModo != null) {
                 accionModo.alModo();
+            }
+        });
+
+        botonAtras.addActionListener(e -> {
+            if (accionAtras != null) {
+                accionAtras.alAtras();
+            }
+        });
+
+        botonAdelante.addActionListener(e -> {
+            if (accionAdelante != null) {
+                accionAdelante.alAdelante();
             }
         });
     }
@@ -306,5 +331,37 @@ public class BarraNavegacion extends JPanel {
 
     public interface AccionModo {
         void alModo();
+    }
+
+    public void setTextoModo(boolean modoOffline) {
+        if (modoOffline) {
+            botonModo.setText("Modo Online");
+        } else {
+            botonModo.setText("Modo Offline");
+        }
+    }
+
+    public interface AccionAtras {
+        void alAtras();
+    }
+
+    public interface AccionAdelante {
+        void alAdelante();
+    }
+
+    public void setAccionAtras(AccionAtras accionAtras) {
+        this.accionAtras = accionAtras;
+    }
+
+    public void setAccionAdelante(AccionAdelante accionAdelante) {
+        this.accionAdelante = accionAdelante;
+    }
+
+    public void actualizarBotonesHistorial(
+            boolean puedeAtras,
+            boolean puedeAdelante) {
+
+        botonAtras.setEnabled(puedeAtras);
+        botonAdelante.setEnabled(puedeAdelante);
     }
 }
