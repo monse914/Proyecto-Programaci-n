@@ -12,11 +12,13 @@ import java.net.MalformedURLException;
 public class Renderizador {
 
     private Map<JTextPane, List<EnlaceInfo>> enlacesPorArea;
-    private Map<JTextPane, List<NoRend>> noRendPorArea;
-    
+
+    private RenderAvanzado renderAvanzado;
+
     public Renderizador() {
+
         enlacesPorArea = new HashMap<>();
-        noRendPorArea = new HashMap<>();
+        renderAvanzado = new RenderAvanzado();
     }
 
     public void renderizarArchivo(String ruta, JTextPane areaContenido) throws IOException {
@@ -33,7 +35,6 @@ public class Renderizador {
 
         areaContenido.setText("");
         enlacesPorArea.put(areaContenido, new ArrayList<>());
-        noRendPorArea.put(areaContenido, new ArrayList<>());
 
         StyledDocument doc = areaContenido.getStyledDocument();
 
@@ -48,7 +49,7 @@ public class Renderizador {
 
         String html = contenido.toString();
         html = extraerBody(html);
-        html = eliminarScriptsYStyles(html);
+        html = limpiarContenidoNoVisible(html);
 
         parsearHTML(html, doc, archivo.getParentFile(), areaContenido);
     }
@@ -58,12 +59,32 @@ public class Renderizador {
 
         javax.swing.text.StyledDocument doc = areaContenido.getStyledDocument();
 
-        String limpio = eliminarScriptsYStyles(html);
+        String limpio = limpiarContenidoNoVisible(html);
         limpio = extraerBody(limpio);
 
         java.io.File carpetaBase = new java.io.File(".");
 
         parsearHTML(limpio, doc, carpetaBase, areaContenido);
+    }
+
+    private void insertarErrorRender(StyledDocument doc, String mensaje) {
+
+        try {
+            SimpleAttributeSet estilo = new SimpleAttributeSet();
+
+            StyleConstants.setForeground(estilo, Color.RED);
+            StyleConstants.setBold(estilo, true);
+            StyleConstants.setFontSize(estilo, 14);
+
+            doc.insertString(
+                    doc.getLength(),
+                    mensaje + "\n",
+                    estilo
+            );
+
+        } catch (BadLocationException e) {
+            e.printStackTrace();
+        }
     }
 
     private String extraerBody(String html) {
@@ -84,21 +105,25 @@ public class Renderizador {
         return html.substring(inicio + 1, fin);
     }
 
-    private String eliminarScriptsYStyles(String html) {
+    private String limpiarContenidoNoVisible(String html) {
+
         html = html.replaceAll("(?is)<script.*?>.*?</script>", "");
         html = html.replaceAll("(?is)<style.*?>.*?</style>", "");
         html = html.replaceAll("(?is)<head.*?>.*?</head>", "");
-        html = html.replaceAll("(?is)<meta.*?>","");
+        html = html.replaceAll("(?is)<meta.*?>", "");
+        html = html.replaceAll("(?is)<link.*?>", "");
+        html = html.replaceAll("(?is)<title.*?>.*?</title>", "");
+        html = html.replaceAll("(?is)<noscript.*?>.*?</noscript>", "");
+        html = html.replaceAll("(?is)<!--.*?-->", "");
 
         return html;
     }
-    
+
     private void parsearHTML(String html, StyledDocument doc, File carpetaBase, JTextPane area) {
         Pattern patron = Pattern.compile("(?is)<[^>]+>|[^<]+");
         Matcher matcher = patron.matcher(html);
 
         SimpleAttributeSet estiloNormal = crearEstiloNormal();
-        SimpleAttributeSet estiloNoRender = crearEstiloNoRender();
         SimpleAttributeSet estiloTitulo = crearEstiloTitulo();
         SimpleAttributeSet estiloParrafo = crearEstiloParrafo();
 
@@ -149,6 +174,24 @@ public class Renderizador {
                     insertar(doc, "\n\n", estiloNormal);
                     estiloActual = estiloNormal;
 
+                } else if (t.matches("(?is)<h5[^>]*>")) {
+
+                    estiloActual = crearEstiloH5();
+
+                } else if (t.matches("(?is)</h5>")) {
+
+                    insertar(doc, "\n\n", estiloNormal);
+                    estiloActual = estiloNormal;
+
+                } else if (t.matches("(?is)<h6[^>]*>")) {
+
+                    estiloActual = crearEstiloH6();
+
+                } else if (t.matches("(?is)</h6>")) {
+
+                    insertar(doc, "\n\n", estiloNormal);
+                    estiloActual = estiloNormal;
+
                 } else if (t.matches("(?is)<b[^>]*>")) {
 
                     estiloActual = crearEstiloBold();
@@ -173,6 +216,14 @@ public class Renderizador {
 
                     estiloActual = estiloNormal;
 
+                } else if (t.matches("(?is)<em[^>]*>")) {
+
+                    estiloActual = crearEstiloItalic();
+
+                } else if (t.matches("(?is)</em>")) {
+
+                    estiloActual = estiloNormal;
+
                 } else if (t.matches("(?is)<p[^>]*>")) {
 
                     estiloActual = estiloParrafo;
@@ -194,6 +245,10 @@ public class Renderizador {
 
                     insertar(doc, "\n", estiloActual);
 
+                } else if (t.matches("(?is)<hr\\s*/?>")) {
+
+                    insertar(doc, "\n────────────────────────────\n", estiloNormal);
+
                 } else if (t.matches("(?is)<li[^>]*>")) {
 
                     insertar(doc, "• ", estiloNormal);
@@ -202,18 +257,30 @@ public class Renderizador {
 
                     insertar(doc, "\n", estiloNormal);
 
-                } else if (t.matches("(?is)</ul>|</ol>|</div>|</span>|</table>|</tr>|</td>")) {
-
+                } else if (t.matches("(?is)</ul>|</ol>")) {
                     insertar(doc, "\n", estiloNormal);
 
                 } else if (t.matches("(?is)<img\\b[^>]*>")) {
 
                     insertarImagen(doc, token, carpetaBase, estiloNormal);
-                }  else {
-                    int inicio = doc.getLength();
-                    insertar(doc,"[Este elemento no se puede renderizar: " + t + " ]\n",estiloNoRender);
-                    int fin = doc.getLength();
-                    noRendPorArea.get(area).add(new NoRend(inicio, fin, ""));
+                }
+                else {
+                    String interpretacion = renderAvanzado.interpretarEtiqueta(token);
+
+                    if (!interpretacion.isEmpty()) {
+
+                        if (interpretacion.startsWith("NO_RENDER:")) {
+
+                            insertarErrorRender(
+                                    doc,
+                                    interpretacion.substring(10)
+                            );
+
+                        } else {
+
+                            insertar(doc, interpretacion, estiloNormal);
+                        }
+                    }
                 }
             } else {
                 String texto = decodificarTextoNormal(token);
@@ -236,13 +303,6 @@ public class Renderizador {
         return estilo;
     }
 
-    private SimpleAttributeSet crearEstiloNoRender() {
-        SimpleAttributeSet estilo = new SimpleAttributeSet();
-        StyleConstants.setFontSize(estilo, 14);
-        StyleConstants.setForeground(estilo, Color.RED);
-        return estilo;
-    }
-
     private SimpleAttributeSet crearEstiloTitulo() {
         SimpleAttributeSet estilo = new SimpleAttributeSet();
         StyleConstants.setFontSize(estilo, 22);
@@ -252,7 +312,9 @@ public class Renderizador {
 
     private SimpleAttributeSet crearEstiloH2() {
 
-        SimpleAttributeSet estilo = new SimpleAttributeSet();
+        SimpleAttributeSet estilo =
+                new SimpleAttributeSet();
+
         StyleConstants.setFontSize(estilo, 20);
         StyleConstants.setBold(estilo, true);
 
@@ -261,7 +323,9 @@ public class Renderizador {
 
     private SimpleAttributeSet crearEstiloH3() {
 
-        SimpleAttributeSet estilo = new SimpleAttributeSet();
+        SimpleAttributeSet estilo =
+                new SimpleAttributeSet();
+
         StyleConstants.setFontSize(estilo, 18);
         StyleConstants.setBold(estilo, true);
 
@@ -270,16 +334,34 @@ public class Renderizador {
 
     private SimpleAttributeSet crearEstiloH4() {
 
-        SimpleAttributeSet estilo = new SimpleAttributeSet();
+        SimpleAttributeSet estilo =
+                new SimpleAttributeSet();
+
         StyleConstants.setFontSize(estilo, 16);
         StyleConstants.setBold(estilo, true);
 
         return estilo;
     }
 
+    private SimpleAttributeSet crearEstiloH5() {
+        SimpleAttributeSet estilo = new SimpleAttributeSet();
+        StyleConstants.setFontSize(estilo, 14);
+        StyleConstants.setBold(estilo, true);
+        return estilo;
+    }
+
+    private SimpleAttributeSet crearEstiloH6() {
+        SimpleAttributeSet estilo = new SimpleAttributeSet();
+        StyleConstants.setFontSize(estilo, 12);
+        StyleConstants.setBold(estilo, true);
+        return estilo;
+    }
+
     private SimpleAttributeSet crearEstiloBold() {
 
-        SimpleAttributeSet estilo = new SimpleAttributeSet();
+        SimpleAttributeSet estilo =
+                new SimpleAttributeSet();
+
         StyleConstants.setBold(estilo, true);
         StyleConstants.setFontSize(estilo, 14);
 
@@ -288,7 +370,9 @@ public class Renderizador {
 
     private SimpleAttributeSet crearEstiloItalic() {
 
-        SimpleAttributeSet estilo = new SimpleAttributeSet();
+        SimpleAttributeSet estilo =
+                new SimpleAttributeSet();
+
         StyleConstants.setItalic(estilo, true);
         StyleConstants.setFontSize(estilo, 14);
 
@@ -454,20 +538,6 @@ public class Renderizador {
         }
     }
 
-    public void aplicarTemaNoRender(JTextPane area){
-        StyledDocument doc = area.getStyledDocument();
-        List<NoRend> noRend = noRendPorArea.get(area);
-        if (noRend == null) {
-            return;
-        }
-        for (NoRend e : noRend) {
-            SimpleAttributeSet estilo = new SimpleAttributeSet();
-            StyleConstants.setFontSize(estilo, 14);
-            StyleConstants.setForeground(estilo, Color.RED);
-            doc.setCharacterAttributes(e.inicio, e.fin - e.inicio, estilo, false);
-        }
-    }
-
     public void aplicarTemaEnlaces(JTextPane area, boolean modoOscuro) {
         StyledDocument doc = area.getStyledDocument();
         List<EnlaceInfo> enlaces = enlacesPorArea.get(area);
@@ -506,8 +576,9 @@ public class Renderizador {
         StyleConstants.setFontSize(estiloTexto, 14);
 
         doc.setCharacterAttributes(0, doc.getLength(), estiloTexto, false);
-        aplicarTemaNoRender(area);
+
         aplicarTemaEnlaces(area, modoOscuro);
+        reaplicarErroresRender(area);
     }
 
     public String obtenerTitulo(String ruta) {
@@ -544,20 +615,6 @@ public class Renderizador {
         EnlaceInfo(int inicio, int fin, String ruta) {
             this.inicio = inicio;
             this.fin = fin;
-            this.ruta = ruta;
-        }
-    }
-
-    private static class NoRend {
-        int inicio;
-        int fin;
-        String ruta;
-        NoRend(int inicio, int fin, String ruta) {
-            this.inicio = inicio;
-            this.inicio = inicio;
-            this.fin = fin;
-            this.fin = fin;
-            this.ruta = ruta;
             this.ruta = ruta;
         }
     }
@@ -640,5 +697,40 @@ public class Renderizador {
         }
 
         return new File(carpetaBase, src).getCanonicalFile();
+    }
+
+    private void reaplicarErroresRender(JTextPane area) {
+
+        StyledDocument doc = area.getStyledDocument();
+
+        String texto = area.getText();
+
+        String buscar = "No se puede renderizar";
+
+        int posicion = texto.indexOf(buscar);
+
+        while (posicion != -1) {
+
+            int fin = texto.indexOf("\n", posicion);
+
+            if (fin == -1) {
+                fin = texto.length();
+            }
+
+            SimpleAttributeSet estilo = new SimpleAttributeSet();
+
+            StyleConstants.setForeground(estilo, Color.RED);
+            StyleConstants.setBold(estilo, true);
+            StyleConstants.setFontSize(estilo, 14);
+
+            doc.setCharacterAttributes(
+                    posicion,
+                    fin - posicion,
+                    estilo,
+                    false
+            );
+
+            posicion = texto.indexOf(buscar, fin);
+        }
     }
 }
