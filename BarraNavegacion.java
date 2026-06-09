@@ -160,7 +160,9 @@ public class BarraNavegacion extends JPanel {
                 botonFavorito,
                 botonVerFavoritos,
                 botonOpciones,
-                botonModo
+                botonModo,
+                botonAtras,
+                botonAdelante
         };
 
         for (JButton b : botones) {
@@ -256,6 +258,8 @@ public class BarraNavegacion extends JPanel {
         aplicarTemaBoton(botonVerFavoritos);
         aplicarTemaBoton(botonOpciones);
         aplicarTemaBoton(botonModo);
+        aplicarTemaBoton(botonAdelante);
+        aplicarTemaBoton(botonAtras);
     }
 
     public boolean esURLLocalValida() {
@@ -281,6 +285,14 @@ public class BarraNavegacion extends JPanel {
 
     public void setAccionModo(AccionModo accionModo) {
         this.accionModo = accionModo;
+    }
+
+    public void setAccionAtras(AccionAtras accionAtras) {
+        this.accionAtras = accionAtras;
+    }
+
+    public void setAccionAdelante(AccionAdelante accionAdelante) {
+        this.accionAdelante = accionAdelante;
     }
 
     public void configurarMenuOpciones(MenuSimple menu) {
@@ -332,15 +344,6 @@ public class BarraNavegacion extends JPanel {
     public interface AccionModo {
         void alModo();
     }
-
-    public void setTextoModo(boolean modoOffline) {
-        if (modoOffline) {
-            botonModo.setText("Modo Online");
-        } else {
-            botonModo.setText("Modo Offline");
-        }
-    }
-
     public interface AccionAtras {
         void alAtras();
     }
@@ -349,12 +352,12 @@ public class BarraNavegacion extends JPanel {
         void alAdelante();
     }
 
-    public void setAccionAtras(AccionAtras accionAtras) {
-        this.accionAtras = accionAtras;
-    }
-
-    public void setAccionAdelante(AccionAdelante accionAdelante) {
-        this.accionAdelante = accionAdelante;
+    public void setTextoModo(boolean modoOffline) {
+        if (modoOffline) {
+            botonModo.setText("Modo Online");
+        } else {
+            botonModo.setText("Modo Offline");
+        }
     }
 
     public void actualizarBotonesHistorial(
