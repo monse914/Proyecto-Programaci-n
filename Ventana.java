@@ -115,43 +115,6 @@ public class Ventana extends JFrame {
         barraBotones.add(btnMax);
         barraBotones.add(btnClose);
 
-        barraHist = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        barraHist.setOpaque(false);
-        btnAtras = new JButton("🡠");
-        btnAdelante = new JButton("🡢");
-        btnAtras.setEnabled(false);
-        btnAdelante.setEnabled(false);
-        JButton[] botonesP = {btnAtras,btnAdelante};
-        for (JButton bp : botonesP) {
-            bp.setFocusPainted(false);
-            bp.setBorderPainted(false);
-            bp.setPreferredSize(new Dimension(50, 25));
-        }
-        barraHist.add(btnAtras);
-        barraHist.add(btnAdelante);
-        btnAtras.addActionListener(e -> {
-            Component comp = pestanas.getSelectedComponent();
-            if (comp instanceof Pestania) {
-                Pestania p = (Pestania) comp;
-                String url = p.atras();
-                if (url != null) {
-                    navegarEnPestaniaActual(p, url);
-                    actualizarBotonesNavegacion();
-                }
-            }
-        });
-        btnAdelante.addActionListener(e -> {
-            Component comp = pestanas.getSelectedComponent();
-            if (comp instanceof Pestania) {
-                Pestania p = (Pestania) comp;
-                String url = p.adelante();
-                if (url != null) {
-                    navegarEnPestaniaActual(p, url);
-                    actualizarBotonesNavegacion();
-                }
-            }
-        });
-
         JPanel izquierda = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
         izquierda.setOpaque(false);
         izquierda.add(tituloVentana);
@@ -328,7 +291,7 @@ public class Ventana extends JFrame {
             String url = pestania.atras();
 
             if (url != null) {
-                navegarEnPestaniaActual(pestania, url);
+                cargarPaginaSegunTipo(pestania, url);
             }
 
             actualizarBotonesHistorial(pestania);
@@ -338,7 +301,7 @@ public class Ventana extends JFrame {
             String url = pestania.adelante();
 
             if (url != null) {
-                navegarEnPestaniaActual(pestania, url);
+                cargarPaginaSegunTipo(pestania, url);
             }
 
             actualizarBotonesHistorial(pestania);
@@ -571,6 +534,21 @@ public class Ventana extends JFrame {
         cargarPaginaEnComponente(urlNormalizada, pestania);
     }
 
+    private void cargarPaginaSegunTipo(Pestania pestania, String url) {
+
+        if (url == null || url.trim().isEmpty()) {
+            return;
+        }
+
+        url = url.trim();
+
+        if (url.startsWith("file:///")) {
+            cargarPaginaEnComponente(url, pestania);
+        } else {
+            cargarPaginaWebEnPestania(pestania, url);
+        }
+    }
+
     private void abrirUrlEnPestana(String url) {
         if (url == null || url.trim().isEmpty()) {
             return;
@@ -621,7 +599,6 @@ public class Ventana extends JFrame {
         pestania.getBarraNavegacion().setURL(urlMostrada);
         pestania.navegar(urlMostrada);
         actualizarBotonesHistorial(pestania);
-        actualizarBotonesNavegacion();
 
         mostrarEstadoCargando();
 
@@ -740,7 +717,6 @@ public class Ventana extends JFrame {
 
                 pestania.setUrlActual(urlNormalizada);
                 pestania.navegar(urlNormalizada);
-                actualizarBotonesNavegacion();
                 actualizarBotonesHistorial(pestania);
                 pestania.getBarraNavegacion().setURL(urlNormalizada);
 
@@ -1029,9 +1005,6 @@ public class Ventana extends JFrame {
 
         return panel;
     }
-
-
-    // Para limitar las pestañas
 
     private void crearNuevaPestanaVacia() {
 
@@ -1712,24 +1685,6 @@ public class Ventana extends JFrame {
             barraEstado.setText(" Modo Offline");
         } else {
             barraEstado.setText(" Modo Online");
-        }
-    }
-
-    private void actualizarBotonesNavegacion() {
-
-        Component comp = pestanas.getSelectedComponent();
-
-        if (comp instanceof Pestania) {
-
-            Pestania p = (Pestania) comp;
-
-            btnAtras.setEnabled(p.puedeAtras());
-            btnAdelante.setEnabled(p.puedeAdelante());
-
-        } else {
-
-            btnAtras.setEnabled(false);
-            btnAdelante.setEnabled(false);
         }
     }
 }
