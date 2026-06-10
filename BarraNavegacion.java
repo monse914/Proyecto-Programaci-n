@@ -208,9 +208,19 @@ public class BarraNavegacion extends JPanel {
     }
 
     private void validarCampoVacio() {
-        botonIr.setEnabled(!campoURL.getText().trim().isEmpty());
+        String texto = campoURL.getText().trim();
+        
+        botonIr.setEnabled(!texto.isEmpty());
+        
+        if (texto.matches("^((25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})\\.){3}(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})(:[0-9]{1,5})?$")) {
+            campoURL.setToolTipText("Dirección IP detectada");
+        } else if (texto.matches("^(www\\.)?[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)+(:[0-9]{1,5})?$")) {
+            campoURL.setToolTipText("Dominio detectado");
+        } else {
+            campoURL.setToolTipText(null);
+        }
     }
-
+    
     private void ejecutarNavegacion() {
         if (accionNavegacion != null && !getURL().isEmpty()) {
             accionNavegacion.alNavegar(getURL());
