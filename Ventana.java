@@ -515,8 +515,8 @@ public class Ventana extends JFrame {
             cargarPaginaEnComponente(url, pestania);
             return;
         }
-
-        if (!url.startsWith("file:///")) {
+        
+        if (esDireccionWeb(url)) {
             cargarPaginaWebEnPestania(pestania, url);
             return;
         }
@@ -587,14 +587,25 @@ public class Ventana extends JFrame {
     }
 
     private void cargarPaginaWebEnPestania(Pestania pestania, String url) {
-
-        String urlMostrada = url;
-
-        if (!urlMostrada.startsWith("http://")
-                && !urlMostrada.startsWith("https://")) {
-
-            urlMostrada = "http://" + urlMostrada;
+        
+        if (esDominio(url)) {
+            barraEstado.setText(" Dominio detectado: " + url);
+        }else if (esIP(url)) {
+            barraEstado.setText(" Dirección IP detectada: " + url);
+        }else if (esIPmasPuerto(url)) {
+            barraEstado.setText(" IP con puerto detectada: " + url);
         }
+
+        String urlMostrada = url.trim();
+        
+        if (!urlMostrada.startsWith("http://") && !urlMostrada.startsWith("https://")) {
+            if (esDominio(urlMostrada)
+                || esIP(urlMostrada)
+                || esIPmasPuerto(urlMostrada)) {
+                    urlMostrada = "http://" + urlMostrada;
+                }
+            }
+
         pestania.setUrlActual(urlMostrada);
         pestania.getBarraNavegacion().setURL(urlMostrada);
         pestania.navegar(urlMostrada);
@@ -615,24 +626,19 @@ public class Ventana extends JFrame {
             protected void done() {
 
                 try {
-
                     String html = get();
-
+                    System.out.println("Tamaño HTML: " + html.length());
+                    System.out.println(html.substring(0, Math.min(1000, html.length())));
+                    
                     JTextPane area = pestania.getAreaContenido();
-
+                    
                     area.setContentType("text/html");
                     area.setEditable(false);
-
-                    HTMLEditorKit kit = new HTMLEditorKit();
-                    HTMLDocument doc = (HTMLDocument) kit.createDefaultDocument();
-
-                    doc.setBase(new URL(finalUrl));
-
-                    area.setEditorKit(kit);
-                    area.setDocument(doc);
-
+                    
+                    System.out.println("HTML:");
+                    System.out.println(html);
+                    
                     area.setText(html);
-
                     area.setCaretPosition(0);
 
                     String estado = clienteHTTP.getEstado();
@@ -1671,14 +1677,14 @@ public class Ventana extends JFrame {
     private boolean esIPmasPuerto(String texto){
         return texto.matches("^((25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})\\.){3}" + "(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2}):[0-9]{1,5}$");
     }
-
+    
     private boolean esDireccionWeb(String texto) {
         return texto.startsWith("http://")
                 || texto.startsWith("https://")
                 || esDominio(texto)
-                || esIP(texto)
-                || esIPmasPuerto(texto);
-    }
+                || esIPmasPuerto(texto)
+                || esIP(texto);
+            }
 
     private void actualizarEstadoModo() {
         if (navegaOffline.estaEnModoOffline()) {
