@@ -24,6 +24,11 @@ public class ClienteHTTP {
         try {
             URL url = new URL(urlTexto);
 
+            System.out.println("URL COMPLETA: " + urlTexto);
+            System.out.println("HOST: " + url.getHost());
+            System.out.println("PUERTO: " + url.getPort());
+            System.out.println("PROTOCOLO: " + url.getProtocol());
+
             HttpURLConnection conexion =
                     (HttpURLConnection) url.openConnection();
 
@@ -32,8 +37,8 @@ public class ClienteHTTP {
             conexion.setReadTimeout(10000);
             conexion.setInstanceFollowRedirects(true);
 
-            conexion.setRequestProperty("User-Agent", "Mozilla/5.0");
-            conexion.setRequestProperty("Accept", "text/html");
+            conexion.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/137.0 Safari/537.36");
+            conexion.setRequestProperty("Accept", "text/html,application/xhtml+xml,*/*");
             conexion.setRequestProperty("Accept-Encoding", "gzip");
 
             int codigo = conexion.getResponseCode();
@@ -112,7 +117,7 @@ public class ClienteHTTP {
         urlTexto = urlTexto.trim();
 
         if (!urlTexto.startsWith("http://") && !urlTexto.startsWith("https://")) {
-            throw new IOException("Error: La URL debe ser absoluta. Ejemplo: https://www.utalca.cl");
+            urlTexto = "https://" + urlTexto;
         }
 
         try {
@@ -169,7 +174,15 @@ public class ClienteHTTP {
         String ruta = obtenerRuta(url);
         boolean https = esHttps(url);
 
-        int puerto = 3000;
+        URL u = new URL(url);
+        
+        int puerto;
+        
+        if (u.getPort() != -1) {
+            puerto = u.getPort();
+        } else {
+            puerto = https ? 443 : 80;
+        }
 
         String statusLine;
         String location = null;
