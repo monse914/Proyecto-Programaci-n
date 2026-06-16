@@ -18,24 +18,18 @@ public class Pestania extends JPanel {
         barraNavegacion = new BarraNavegacion();
 
         areaContenido = new JTextPane();
-        areaContenido.setBorder(
-                BorderFactory.createEmptyBorder(8, 8, 8, 8)
-        );
+        areaContenido.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         areaContenido.setFont(new Font("Monospaced", Font.PLAIN, 14));
         areaContenido.setHighlighter(null);
         areaContenido.setFocusable(false);
-        areaContenido.setSelectionColor(
-                new Color(0,0,0,0)
+        areaContenido.setSelectionColor(new Color(0,0,0,0)
         );
 
         scrollContenido = new JScrollPane(areaContenido);
         scrollContenido.setBorder(
                 BorderFactory.createCompoundBorder(
                         BorderFactory.createEmptyBorder(1, 1, 1, 1),
-                        BorderFactory.createLineBorder(
-                                new Color(120,120,120),
-                                1
-                        )
+                        BorderFactory.createLineBorder(new Color(120,120,120),1)
                 )
         );
 
@@ -137,20 +131,10 @@ public class Pestania extends JPanel {
     }
 
     public void navegar(String url) {
-        if (url == null || url.trim().isEmpty()) {
-            return;
-        }
-
         urlActual = url;
-
-        if (indice >= 0 && historial.get(indice).equals(url)) {
-            return;
-        }
-
         if (indice < historial.size() - 1) {
             historial = new ArrayList<>(historial.subList(0, indice + 1));
         }
-
         historial.add(url);
         indice++;
     }
