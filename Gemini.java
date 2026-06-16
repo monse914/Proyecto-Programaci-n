@@ -3,15 +3,11 @@ import java.net.*;
 import javax.net.ssl.HttpsURLConnection;
 
 public class Gemini {
-
-    private final String API_KEY =
-            "tu api monse";
+    private static final String API_KEY = "tu api";
 
     public String preguntar(String pregunta) throws Exception {
 
-        String endpoint =
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="
-                        + API_KEY;
+        String endpoint = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=" + API_KEY;
 
         URL url = new URL(endpoint);
 
@@ -91,4 +87,6 @@ public class Gemini {
         return json.substring(inicio, fin)
                 .replace("\\n","\n");
     }
+
+
 }
