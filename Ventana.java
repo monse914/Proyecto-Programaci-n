@@ -558,11 +558,8 @@ public class Ventana extends JFrame {
         }
         
         if (!url.startsWith("file:///")) {
-            cargarPaginaWebEnPestania(pestania, url);
             cargarPaginaWebEnPestania(pestania, url, agregarAlHistorial);
             return;
-            return;
-        }
         }
 
         String urlNormalizada = normalizarUrl(url);
