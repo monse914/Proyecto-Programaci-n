@@ -17,6 +17,7 @@ public class Ventana extends JFrame {
     private Renderizador renderizador;
     private JLabel tituloVentana;
     private MenuSimple menu;
+    private Gemini gemini;
     private ClienteHTTP clienteHTTP;
     private Historial historial;
     private Favoritos favoritos;
@@ -35,6 +36,7 @@ public class Ventana extends JFrame {
     private JButton btnAtras;
     private JButton btnAdelante;
     private JButton btnNuevaPestana;
+    private JButton btnIA;
     private Component pestanaBotonMas;
 
     private Map<String, Pestania> pestanasPorUrl;
@@ -232,6 +234,7 @@ public class Ventana extends JFrame {
         habilitarRedimensionamiento();
 
         setVisible(true);
+        crearBotonFlotanteIA();
 
         if (urlInicial != null && !urlInicial.isEmpty()) {
             pestaniaInicial.getBarraNavegacion().setURL(urlInicial);
@@ -602,7 +605,7 @@ public class Ventana extends JFrame {
             if (esDominio(urlMostrada)
                 || esIP(urlMostrada)
                 || esIPmasPuerto(urlMostrada)) {
-                    urlMostrada = "http://" + urlMostrada;
+                    urlMostrada = "https://" + urlMostrada;
                 }
             }
 
@@ -1553,7 +1556,7 @@ public class Ventana extends JFrame {
     private void detectarClicks(JTextPane area) {
         area.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
-                int pos = area.viewToModel2D(e.getPoint());
+                int pos = area.viewToModel(e.getPoint());
                 String ruta = renderizador.getRutaEnlaceEn(area, pos);
 
                 if (ruta != null) {
@@ -1581,7 +1584,7 @@ public class Ventana extends JFrame {
     private void detectarHoverLinks(JTextPane area) {
         area.addMouseMotionListener(new MouseMotionAdapter() {
             public void mouseMoved(MouseEvent e) {
-                int pos = area.viewToModel2D(e.getPoint());
+                int pos = area.viewToModel(e.getPoint());
 
                 if (renderizador.esEnlace(area, pos)) {
                     area.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -1693,4 +1696,137 @@ public class Ventana extends JFrame {
             barraEstado.setText(" Modo Online");
         }
     }
-}
+    
+    private void crearBotonFlotanteIA() {
+        btnIA = new JButton("✦") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(
+                    RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON);
+                    
+                    g2.setColor(new Color(0, 120, 255));
+                    g2.fillOval(0, 0, getWidth(), getHeight());
+                    
+                    FontMetrics fm = g2.getFontMetrics(getFont());
+                    
+                    int x = (getWidth() - fm.stringWidth("✦")) / 2;
+                    int y = (getHeight() + fm.getAscent()) / 2 - 4;
+                    
+                    g2.setColor(Color.WHITE);
+                    g2.drawString("✦", x, y);
+
+                    g2.dispose();
+                }
+            };
+            btnIA.setContentAreaFilled(false);
+            btnIA.setBorderPainted(false);
+            btnIA.setFocusPainted(false);
+            btnIA.setOpaque(false);
+
+            btnIA.setFont(new Font("Segoe UI Symbol", Font.BOLD, 28));
+
+            btnIA.setBounds(
+                getWidth() - 100,
+                getHeight() - 140, 65, 65);
+                
+                final Point[] click = new Point[1];
+                
+                btnIA.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mousePressed(MouseEvent e) {
+                        click[0] = e.getPoint();
+                    }
+                });
+                btnIA.addMouseMotionListener(new MouseMotionAdapter() {
+                    @Override
+                    public void mouseDragged(MouseEvent e) {
+                        int x = btnIA.getX() + e.getX() - click[0].x;
+                        
+                        int y = btnIA.getY() + e.getY() - click[0].y;
+                        
+                        btnIA.setLocation(x, y);
+                    }
+                });
+                btnIA.addActionListener(e -> abrirAsistenteIA());
+                getLayeredPane().add(btnIA, JLayeredPane.DRAG_LAYER);
+                getLayeredPane().revalidate();
+                getLayeredPane().repaint();
+        }
+
+            private void abrirAsistenteIA() {
+                JDialog dialogo = new JDialog(this, "Gemini", false);
+                dialogo.setSize(500, 400);
+                dialogo.setLocationRelativeTo(this);
+                dialogo.setLayout(new BorderLayout());
+                JTextArea areaChat = new JTextArea();
+                areaChat.setEditable(false);
+                
+                JScrollPane scroll = new JScrollPane(areaChat);
+                JTextField campoPregunta = new JTextField();
+                
+                JButton btnEnviar = new JButton("Enviar");
+                
+                JPanel panelInferior = new JPanel(new BorderLayout());
+                
+                panelInferior.add(campoPregunta, BorderLayout.CENTER);
+                panelInferior.add(btnEnviar, BorderLayout.EAST);
+                
+                dialogo.add(scroll, BorderLayout.CENTER);
+                dialogo.add(panelInferior, BorderLayout.SOUTH);
+                
+                btnEnviar.addActionListener(e -> {
+                    String pregunta =
+                    campoPregunta.getText().trim();
+                    
+                    if (pregunta.isEmpty()) {
+                        return;
+                    }
+                    
+                    areaChat.append("Tú: " + pregunta + "\n\n");
+                    campoPregunta.setText("");
+                    SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
+                        
+                        @Override
+                        protected String doInBackground() throws Exception {
+                            
+                            Gemini gemini = new Gemini();
+                            
+                            return gemini.preguntar(pregunta);
+                        }
+                        
+                        @Override
+                        protected void done() {
+                            try {
+                                
+                                String respuesta = get();
+                                areaChat.append("Gemini: " + respuesta+ "\n\n"
+                                );
+                            } catch (Exception ex) {
+                                areaChat.append("Error: " + ex.getMessage() + "\n\n");
+                                }
+                            }
+                        };
+                        worker.execute();
+                    });
+                    campoPregunta.addActionListener(e -> btnEnviar.doClick());
+                    dialogo.setDefaultCloseOperation(
+                        JDialog.DO_NOTHING_ON_CLOSE);
+                        dialogo.addWindowListener(new WindowAdapter() {
+                            @Override
+                            public void windowClosing(WindowEvent e) {
+                                int opcion = JOptionPane.showConfirmDialog(dialogo,
+                                    "¿Deseas cerrar el asistente IA?",
+                                    "Confirmar cierre",
+                                    JOptionPane.YES_NO_OPTION,
+                                    JOptionPane.QUESTION_MESSAGE
+                                );
+                                if (opcion == JOptionPane.YES_OPTION) {
+                                    dialogo.dispose();
+                                }
+                            }
+                        });
+                dialogo.setVisible(true);
+            }
+        }
