@@ -117,6 +117,49 @@ public class Ventana extends JFrame {
         barraBotones.add(btnMax);
         barraBotones.add(btnClose);
 
+        barraHist = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        barraHist.setOpaque(false);
+        
+        btnAtras = new JButton("🡠");
+        btnAdelante = new JButton("🡢");
+        
+        btnAtras.setEnabled(false);
+        btnAdelante.setEnabled(false);
+        
+        JButton[] botonesP = {btnAtras,btnAdelante};
+        for (JButton bp : botonesP) {
+            bp.setFocusPainted(false);
+            bp.setBorderPainted(false);
+            bp.setPreferredSize(new Dimension(50, 25));
+        }
+        
+        barraHist.add(btnAtras);
+        barraHist.add(btnAdelante);
+        
+        btnAtras.addActionListener(e -> {
+            Component comp = pestanas.getSelectedComponent();
+            if (comp instanceof Pestania) {
+                Pestania p = (Pestania) comp;
+                String url = p.atras();
+                if (url != null) {
+                    navegarEnPestaniaActual(p, url, false);
+                    actualizarBotonesNavegacion();
+                }
+            }
+        });
+        
+        btnAdelante.addActionListener(e -> {
+            Component comp = pestanas.getSelectedComponent();
+            if (comp instanceof Pestania) {
+                Pestania p = (Pestania) comp;
+                String url = p.adelante();
+                if (url != null) {
+                    navegarEnPestaniaActual(p, url, false);
+                    actualizarBotonesNavegacion();
+                }
+            }
+        });
+
         JPanel izquierda = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
         izquierda.setOpaque(false);
         izquierda.add(tituloVentana);
@@ -260,14 +303,14 @@ public class Ventana extends JFrame {
         detectarHoverLinks(pestania.getAreaContenido());
 
         pestania.getBarraNavegacion().setAccionNavegacion(url -> {
-            navegarEnPestaniaActual(pestania, url);
+            navegarEnPestaniaActual(pestania, url, true);
         });
 
         pestania.getBarraNavegacion().setAccionRecargar(() -> {
             String url = pestania.getUrlActual();
 
             if (url != null && !url.isEmpty()) {
-                navegarEnPestaniaActual(pestania, url);
+                navegarEnPestaniaActual(pestania, url, false);
             }
         });
 
@@ -294,7 +337,7 @@ public class Ventana extends JFrame {
             String url = pestania.atras();
 
             if (url != null) {
-                cargarPaginaSegunTipo(pestania, url);
+                navegarEnPestaniaActual(pestania, url, false);
             }
 
             actualizarBotonesHistorial(pestania);
@@ -304,7 +347,7 @@ public class Ventana extends JFrame {
             String url = pestania.adelante();
 
             if (url != null) {
-                cargarPaginaSegunTipo(pestania, url);
+                navegarEnPestaniaActual(pestania, url, false);
             }
 
             actualizarBotonesHistorial(pestania);
@@ -346,7 +389,7 @@ public class Ventana extends JFrame {
             }
 
             pestania.getBarraNavegacion().setURL(archivo);
-            navegarEnPestaniaActual(pestania, archivo);
+            navegarEnPestaniaActual(pestania, archivo, true);
 
         } else {
 
@@ -490,13 +533,13 @@ public class Ventana extends JFrame {
         String url = listaFavoritos.get(index).getUrl();
 
         if (pestaniaActual != null) {
-            navegarEnPestaniaActual(pestaniaActual, url);
+            navegarEnPestaniaActual(pestaniaActual, url, true);
         } else {
             abrirUrlEnPestana(url);
         }
     }
 
-    private void navegarEnPestaniaActual(Pestania pestania, String url) {
+    private void navegarEnPestaniaActual(Pestania pestania, String url, boolean agregarAlHistorial) {
         if (url == null || url.trim().isEmpty()) {
             return;
         }
@@ -504,24 +547,22 @@ public class Ventana extends JFrame {
         url = url.trim();
 
         if (navegaOffline.estaEnModoOffline()) {
-
             if (!url.startsWith("file:///")) {
-
-                JOptionPane.showMessageDialog(
-                        this,
+                JOptionPane.showMessageDialog(this,
                         "Estás en modo offline. Solo puedes abrir archivos HTML del computador."
                 );
-
                 return;
             }
-
             cargarPaginaEnComponente(url, pestania);
             return;
         }
         
-        if (esDireccionWeb(url)) {
+        if (!url.startsWith("file:///")) {
             cargarPaginaWebEnPestania(pestania, url);
+            cargarPaginaWebEnPestania(pestania, url, agregarAlHistorial);
             return;
+            return;
+        }
         }
 
         String urlNormalizada = normalizarUrl(url);
@@ -535,21 +576,6 @@ public class Ventana extends JFrame {
         }
 
         cargarPaginaEnComponente(urlNormalizada, pestania);
-    }
-
-    private void cargarPaginaSegunTipo(Pestania pestania, String url) {
-
-        if (url == null || url.trim().isEmpty()) {
-            return;
-        }
-
-        url = url.trim();
-
-        if (url.startsWith("file:///")) {
-            cargarPaginaEnComponente(url, pestania);
-        } else {
-            cargarPaginaWebEnPestania(pestania, url);
-        }
     }
 
     private void abrirUrlEnPestana(String url) {
@@ -566,7 +592,7 @@ public class Ventana extends JFrame {
             agregarPestana(url, nuevaPestania, null);
             pestanas.setSelectedComponent(nuevaPestania);
 
-            cargarPaginaWebEnPestania(nuevaPestania, url);
+            cargarPaginaWebEnPestania(nuevaPestania, url, true);
             return;
         }
 
@@ -589,7 +615,7 @@ public class Ventana extends JFrame {
         cargarPaginaEnComponente(urlNormalizada, nuevaPestania);
     }
 
-    private void cargarPaginaWebEnPestania(Pestania pestania, String url) {
+    private void cargarPaginaWebEnPestania(Pestania pestania, String url, boolean esta) {
         
         if (esDominio(url)) {
             barraEstado.setText(" Dominio detectado: " + url);
@@ -611,8 +637,11 @@ public class Ventana extends JFrame {
 
         pestania.setUrlActual(urlMostrada);
         pestania.getBarraNavegacion().setURL(urlMostrada);
-        pestania.navegar(urlMostrada);
+        if (esta) {
+            pestania.navegar(urlMostrada);
+        }
         actualizarBotonesHistorial(pestania);
+        actualizarBotonesNavegacion();
 
         mostrarEstadoCargando();
 
@@ -726,6 +755,7 @@ public class Ventana extends JFrame {
 
                 pestania.setUrlActual(urlNormalizada);
                 pestania.navegar(urlNormalizada);
+                actualizarBotonesNavegacion();
                 actualizarBotonesHistorial(pestania);
                 pestania.getBarraNavegacion().setURL(urlNormalizada);
 
@@ -1334,7 +1364,7 @@ public class Ventana extends JFrame {
 
         if (comp instanceof Pestania) {
             Pestania pestaniaActual = (Pestania) comp;
-            navegarEnPestaniaActual(pestaniaActual, url);
+            navegarEnPestaniaActual(pestaniaActual, url, false);
         } else {
             abrirUrlEnPestana(url);
         }
@@ -1828,5 +1858,17 @@ public class Ventana extends JFrame {
                             }
                         });
                 dialogo.setVisible(true);
+            }
+
+            private void actualizarBotonesNavegacion() {
+                Component comp = pestanas.getSelectedComponent();
+                if (comp instanceof Pestania) {
+                    Pestania p = (Pestania) comp;
+                    btnAtras.setEnabled(p.puedeAtras());
+                    btnAdelante.setEnabled(p.puedeAdelante());
+                } else {
+                    btnAtras.setEnabled(false);
+                    btnAdelante.setEnabled(false);
+                }
             }
         }
