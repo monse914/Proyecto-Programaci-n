@@ -56,7 +56,7 @@ public class Gemini {
 
         br.close();
 
-        return extraerTexto(respuesta.toString());
+        return respuesta.toString();
     }
 
     private String escapar(String texto) {
