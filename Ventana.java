@@ -38,6 +38,7 @@ public class Ventana extends JFrame {
     private JButton btnNuevaPestana;
     private JButton btnIA;
     private Component pestanaBotonMas;
+    private JDialog dialogoIA;
 
     private Map<String, Pestania> pestanasPorUrl;
     private Map<Component, JLabel> etiquetasPestanas;
@@ -241,6 +242,9 @@ public class Ventana extends JFrame {
         barraEstado = new JLabel(" Listo");
         barraEstado.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
         pestanas.addChangeListener(e -> {
+            if (dialogoIA != null && dialogoIA.isShowing()) {
+                dialogoIA.dispose();
+            }
             Component comp = pestanas.getSelectedComponent();
             if (comp instanceof Pestania) {
                 Pestania p = (Pestania) comp;
@@ -1783,10 +1787,13 @@ public class Ventana extends JFrame {
         }
 
             private void abrirAsistenteIA() {
-                JDialog dialogo = new JDialog(this, "Gemini", false);
-                dialogo.setSize(500, 400);
-                dialogo.setLocationRelativeTo(this);
-                dialogo.setLayout(new BorderLayout());
+                if (dialogoIA != null && dialogoIA.isShowing()) {
+                    dialogoIA.dispose();
+                }
+                dialogoIA = new JDialog(this, "Gemini", false);
+                dialogoIA.setSize(500, 400);
+                dialogoIA.setLocationRelativeTo(this);
+                dialogoIA.setLayout(new BorderLayout());
                 JTextArea areaChat = new JTextArea();
                 areaChat.setEditable(false);
                 
@@ -1800,8 +1807,8 @@ public class Ventana extends JFrame {
                 panelInferior.add(campoPregunta, BorderLayout.CENTER);
                 panelInferior.add(btnEnviar, BorderLayout.EAST);
                 
-                dialogo.add(scroll, BorderLayout.CENTER);
-                dialogo.add(panelInferior, BorderLayout.SOUTH);
+                dialogoIA.add(scroll, BorderLayout.CENTER);
+                dialogoIA.add(panelInferior, BorderLayout.SOUTH);
                 
                 btnEnviar.addActionListener(e -> {
                     String pregunta =
@@ -1813,6 +1820,11 @@ public class Ventana extends JFrame {
                     
                     areaChat.append("Tú: " + pregunta + "\n\n");
                     campoPregunta.setText("");
+                    Component compActual = pestanas.getSelectedComponent();
+                    if (!(compActual instanceof Pestania)) {
+                        return;
+                    }
+                    Pestania pestaniaActual = (Pestania) compActual;
                     SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
                         
                         @Override
@@ -1822,39 +1834,43 @@ public class Ventana extends JFrame {
                             
                             return gemini.preguntar(pregunta);
                         }
-                        
                         @Override
                         protected void done() {
                             try {
-                                
                                 String respuesta = get();
-                                areaChat.append("Gemini: " + respuesta+ "\n\n"
-                                );
+                                
+                                areaChat.append("Gemini: " + respuesta + "\n\n");
+                                
+                                String html ="<html><body style='font-family:Arial;'>" + respuesta.replace("\n", "<br>") + "</body></html>";
+                                
+                                pestaniaActual.getAreaContenido().setContentType("text/html");
+                                pestaniaActual.getAreaContenido().setText(html);
+                            
                             } catch (Exception ex) {
                                 areaChat.append("Error: " + ex.getMessage() + "\n\n");
-                                }
                             }
-                        };
-                        worker.execute();
-                    });
-                    campoPregunta.addActionListener(e -> btnEnviar.doClick());
-                    dialogo.setDefaultCloseOperation(
-                        JDialog.DO_NOTHING_ON_CLOSE);
-                        dialogo.addWindowListener(new WindowAdapter() {
-                            @Override
+                        }
+                    };
+                    worker.execute();
+                });
+                campoPregunta.addActionListener(e -> btnEnviar.doClick());
+                dialogoIA.setDefaultCloseOperation(
+                    JDialog.DO_NOTHING_ON_CLOSE);
+                    dialogoIA.addWindowListener(new WindowAdapter() {
+                        @Override
                             public void windowClosing(WindowEvent e) {
-                                int opcion = JOptionPane.showConfirmDialog(dialogo,
+                                int opcion = JOptionPane.showConfirmDialog(dialogoIA,
                                     "¿Deseas cerrar el asistente IA?",
                                     "Confirmar cierre",
                                     JOptionPane.YES_NO_OPTION,
                                     JOptionPane.QUESTION_MESSAGE
                                 );
                                 if (opcion == JOptionPane.YES_OPTION) {
-                                    dialogo.dispose();
+                                    dialogoIA.dispose();
                                 }
                             }
                         });
-                dialogo.setVisible(true);
+                dialogoIA.setVisible(true);
             }
 
             private void actualizarBotonesNavegacion() {
