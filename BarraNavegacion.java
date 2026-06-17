@@ -39,26 +39,25 @@ public class BarraNavegacion extends JPanel {
         botonFavorito = new JButton("☆");
         botonIr = new JButton("Ir");
         botonVerFavoritos = new JButton("Favoritos");
-        botonOpciones = new JButton("Opciones");
+        botonOpciones = new JButton("...");
         botonModo = new JButton ("Modo Offline");
 
         botonIr.setEnabled(false);
 
         menuOpcionesPopup = new JPopupMenu();
 
-        configurarBotonIcono(botonRecargar);
-        configurarBotonIcono(botonFavorito);
-
-        Dimension tamBotonTexto = new Dimension(95, 28);
-        configurarBotonTexto(botonIr, new Dimension(45, 28));
-        configurarBotonTexto(botonVerFavoritos, tamBotonTexto);
-        configurarBotonTexto(botonOpciones, tamBotonTexto);
-
         configurarBotonIcono(botonAtras);
         configurarBotonIcono(botonAdelante);
 
         botonAtras.setEnabled(false);
         botonAdelante.setEnabled(false);
+
+        configurarBotonIcono(botonRecargar);
+        configurarBotonIcono(botonFavorito);
+
+        configurarBotonTexto(botonIr, new Dimension(45, 28));
+        configurarBotonTexto(botonVerFavoritos, new Dimension(90, 28));
+        configurarBotonTexto(botonOpciones, new Dimension(110, 28));
 
         configurarEventos();
         configurarHoverBotones();
@@ -100,14 +99,15 @@ public class BarraNavegacion extends JPanel {
 
     private void configurarEventos() {
         campoURL.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
             public void insertUpdate(DocumentEvent e) {
                 validarCampoVacio();
             }
-
+            @Override
             public void removeUpdate(DocumentEvent e) {
                 validarCampoVacio();
             }
-
+            @Override
             public void changedUpdate(DocumentEvent e) {
                 validarCampoVacio();
             }
@@ -155,18 +155,19 @@ public class BarraNavegacion extends JPanel {
 
     private void configurarHoverBotones() {
         JButton[] botones = {
-                botonIr,
-                botonRecargar,
-                botonFavorito,
-                botonVerFavoritos,
-                botonOpciones,
-                botonModo,
-                botonAtras,
-                botonAdelante
+            botonIr,
+            botonRecargar,
+            botonFavorito,
+            botonVerFavoritos,
+            botonOpciones,
+            botonModo,
+            botonAtras,
+            botonAdelante
         };
 
         for (JButton b : botones) {
             b.addMouseListener(new MouseAdapter() {
+                @Override
                 public void mouseEntered(MouseEvent e) {
                     b.setOpaque(true);
                     b.setContentAreaFilled(true);
@@ -174,7 +175,7 @@ public class BarraNavegacion extends JPanel {
                     b.setForeground(Color.BLACK);
                     b.repaint();
                 }
-
+                @Override
                 public void mouseExited(MouseEvent e) {
                     aplicarTemaBoton(b);
                     b.repaint();
@@ -209,7 +210,6 @@ public class BarraNavegacion extends JPanel {
 
     private void validarCampoVacio() {
         String texto = campoURL.getText().trim();
-        
         botonIr.setEnabled(!texto.isEmpty());
         
         if (texto.matches("^((25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})\\.){3}(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})(:[0-9]{1,5})?$")) {
@@ -245,7 +245,6 @@ public class BarraNavegacion extends JPanel {
 
     public void aplicarTema(boolean modoOscuro) {
         this.modoOscuro = modoOscuro;
-
         Color fondo;
 
         if (modoOscuro) {
@@ -307,19 +306,15 @@ public class BarraNavegacion extends JPanel {
 
     public void configurarMenuOpciones(MenuSimple menu) {
         menuOpcionesPopup.removeAll();
-
         JMenu menuOriginal = menu.getMenuOpciones();
 
         for (int i = 0; i < menuOriginal.getItemCount(); i++) {
             JMenuItem item = menuOriginal.getItem(i);
-
             if (item != null) {
                 JMenuItem copia = new JMenuItem(item.getText());
-
                 for (ActionListener al : item.getActionListeners()) {
                     copia.addActionListener(al);
                 }
-
                 menuOpcionesPopup.add(copia);
             } else {
                 menuOpcionesPopup.addSeparator();
@@ -327,11 +322,7 @@ public class BarraNavegacion extends JPanel {
         }
 
         botonOpciones.addActionListener(e -> {
-            menuOpcionesPopup.show(
-                    botonOpciones,
-                    0,
-                    botonOpciones.getHeight()
-            );
+            menuOpcionesPopup.show(botonOpciones, 0, botonOpciones.getHeight());
         });
     }
 
@@ -370,10 +361,7 @@ public class BarraNavegacion extends JPanel {
         }
     }
 
-    public void actualizarBotonesHistorial(
-            boolean puedeAtras,
-            boolean puedeAdelante) {
-
+    public void actualizarBotonesHistorial(boolean puedeAtras, boolean puedeAdelante) {
         botonAtras.setEnabled(puedeAtras);
         botonAdelante.setEnabled(puedeAdelante);
     }
