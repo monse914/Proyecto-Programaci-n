@@ -11,6 +11,7 @@ public class Pestania extends JPanel {
     private java.util.List<String> historial = new java.util.ArrayList<>();
     private int indice = -1;
     private String estado = "";
+    private String historialIA = "";
 
     public Pestania() {
         setLayout(new BorderLayout());
@@ -155,6 +156,14 @@ public class Pestania extends JPanel {
         }
 
         return urlActual;
+    }
+
+    public String getHistorialIA() {
+        return historialIA;
+    }
+    
+    public void agregarHistorialIA(String texto) {
+        historialIA += texto + "\n";
     }
 
     public boolean puedeAtras() {
