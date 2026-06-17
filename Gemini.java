@@ -12,24 +12,22 @@ public class Gemini {
         URL url = new URL(endpoint);
 
         HttpsURLConnection conexion =
-                (HttpsURLConnection) url.openConnection();
+        (HttpsURLConnection) url.openConnection();
+        conexion.setRequestMethod("POST");
+        conexion.setDoOutput(true);
 
         conexion.setRequestMethod("POST");
         conexion.setDoOutput(true);
+
+        conexion.setConnectTimeout(10000);
+        conexion.setReadTimeout(10000);
 
         conexion.setRequestProperty(
                 "Content-Type",
                 "application/json"
         );
 
-        String json =
-                "{"
-                        + "\"contents\":[{"
-                        + "\"parts\":[{"
-                        + "\"text\":\"" + escapar(pregunta) + "\""
-                        + "}]"
-                        + "}]"
-                        + "}";
+        String json = "{"+ "\"contents\":[{" + "\"parts\":[{" + "\"text\":\"" + escapar(pregunta) + "\"" + "}]" + "}]" + "}";
 
         try(OutputStream os =
                     conexion.getOutputStream()) {
@@ -37,16 +35,15 @@ public class Gemini {
             os.write(json.getBytes("UTF-8"));
         }
 
-        BufferedReader br =
-                new BufferedReader(
-                        new InputStreamReader(
-                                conexion.getInputStream(),
-                                "UTF-8"
-                        )
-                );
+        int codigo = conexion.getResponseCode();
+        
+        if (codigo != 200) {
+                throw new IOException("No fue posible conectarse a Gemini. Código: " + codigo);
+        }
 
-        StringBuilder respuesta =
-                new StringBuilder();
+        BufferedReader br = new BufferedReader(new InputStreamReader(conexion.getInputStream(), "UTF-8"));
+
+        StringBuilder respuesta = new StringBuilder();
 
         String linea;
 
@@ -56,7 +53,7 @@ public class Gemini {
 
         br.close();
 
-        return respuesta.toString();
+        return extraerTexto(respuesta.toString());
     }
 
     private String escapar(String texto) {
@@ -66,27 +63,48 @@ public class Gemini {
                 .replace("\"","\\\"");
     }
 
-    private String extraerTexto(String json) {
-
-        String clave = "\"text\":\"";
-
-        int inicio = json.indexOf(clave);
-
-        if(inicio == -1) {
-            return "No se pudo obtener respuesta.";
-        }
-
-        inicio += clave.length();
-
-        int fin = json.indexOf("\"", inicio);
-
-        if(fin == -1) {
-            return "Respuesta inválida.";
-        }
-
-        return json.substring(inicio, fin)
-                .replace("\\n","\n");
-    }
-
-
-}
+   private String extraerTexto(String json) {
+        try {
+                int inicio = json.indexOf("\"text\":");
+                if (inicio == -1) {
+                        return "No se encontró texto.";
+                }
+                
+                inicio = json.indexOf("\"", inicio + 7) + 1;
+                
+                StringBuilder texto = new StringBuilder();
+                
+                boolean escape = false;
+                
+                for (int i = inicio; i < json.length(); i++) {
+                        char c = json.charAt(i);
+                        if (escape) {
+                                switch (c) {
+                                        case 'n': texto.append('\n');
+                                                break;
+                                                case '"': texto.append('"');
+                                                        break;
+                                                        case '\\': texto.append('\\');
+                                                                break;
+                                                                default: texto.append(c);
+                                                                }
+                                                                escape = false;
+                                                                continue;
+                                                        }
+                                                        
+                                                        if (c == '\\') {
+                                                                escape = true;
+                                                                continue;
+                                                        }
+                                                        
+                                                        if (c == '"') {
+                                                                break;
+                                                        }
+                                                        texto.append(c);
+                                                }
+                                                return texto.toString();
+                                        } catch (Exception e) {
+                                                return "Error leyendo respuesta: " + e.getMessage();
+                                        }
+                                }
+                        }
