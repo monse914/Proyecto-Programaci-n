@@ -1964,7 +1964,7 @@ public class Ventana extends JFrame {
                         RenderingHints.KEY_ANTIALIASING,
                         RenderingHints.VALUE_ANTIALIAS_ON);
 
-                g2.setColor(new Color(0, 120, 255));
+                g2.setColor(new Color(114, 47, 55));
                 g2.fillOval(0, 0, getWidth(), getHeight());
 
                 FontMetrics fm = g2.getFontMetrics(getFont());
