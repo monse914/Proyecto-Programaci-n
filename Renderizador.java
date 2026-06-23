@@ -67,19 +67,40 @@ public class Renderizador {
         parsearHTML(limpio, doc, carpetaBase, areaContenido);
     }
 
-    private void insertarErrorRender(StyledDocument doc, String mensaje) {
+    private void insertarErrorRender(
+            StyledDocument doc,
+            String mensaje) {
 
         try {
-            SimpleAttributeSet estilo = new SimpleAttributeSet();
 
-            StyleConstants.setForeground(estilo, Color.RED);
-            StyleConstants.setBold(estilo, true);
-            StyleConstants.setFontSize(estilo, 14);
+            SimpleAttributeSet estilo =
+                    new SimpleAttributeSet();
+
+            StyleConstants.setForeground(
+                    estilo,
+                    Color.RED);
+
+            StyleConstants.setBold(
+                    estilo,
+                    true);
+
+            StyleConstants.setFontSize(
+                    estilo,
+                    14);
+
+            int inicio = doc.getLength();
 
             doc.insertString(
-                    doc.getLength(),
+                    inicio,
                     mensaje + "\n",
                     estilo
+            );
+
+            doc.setCharacterAttributes(
+                    inicio,
+                    mensaje.length(),
+                    estilo,
+                    false
             );
 
         } catch (BadLocationException e) {
@@ -87,7 +108,7 @@ public class Renderizador {
         }
     }
 
-    private String extraerBody(String html) {
+    public String extraerBody(String html) {
         String lower = html.toLowerCase();
 
         int inicio = lower.indexOf("<body");
@@ -105,7 +126,7 @@ public class Renderizador {
         return html.substring(inicio + 1, fin);
     }
 
-    private String limpiarContenidoNoVisible(String html) {
+    public String limpiarContenidoNoVisible(String html) {
 
         html = html.replaceAll("(?is)<script.*?>.*?</script>", "");
         html = html.replaceAll("(?is)<style.*?>.*?</style>", "");
@@ -265,22 +286,7 @@ public class Renderizador {
                     insertarImagen(doc, token, carpetaBase, estiloNormal);
                 }
                 else {
-                    String interpretacion = renderAvanzado.interpretarEtiqueta(token);
-
-                    if (!interpretacion.isEmpty()) {
-
-                        if (interpretacion.startsWith("NO_RENDER:")) {
-
-                            insertarErrorRender(
-                                    doc,
-                                    interpretacion.substring(10)
-                            );
-
-                        } else {
-
-                            insertar(doc, interpretacion, estiloNormal);
-                        }
-                    }
+                    renderAvanzado.procesarEtiqueta(area, token);
                 }
             } else {
                 String texto = decodificarTextoNormal(token);
@@ -388,8 +394,16 @@ public class Renderizador {
     }
 
     private String extraerHref(String tag, File carpetaBase) {
+
         Pattern p = Pattern.compile("(?is)href\\s*=\\s*\"(.*?)\"");
         Matcher m = p.matcher(tag);
+
+        if (m.find()) {
+            return resolverRuta(carpetaBase, m.group(1).trim());
+        }
+
+        p = Pattern.compile("(?is)href\\s*=\\s*'(.*?)'");
+        m = p.matcher(tag);
 
         if (m.find()) {
             return resolverRuta(carpetaBase, m.group(1).trim());
@@ -445,6 +459,7 @@ public class Renderizador {
         SimpleAttributeSet estilo = new SimpleAttributeSet(estiloBase);
         StyleConstants.setForeground(estilo, new Color(0, 102, 204));
         StyleConstants.setUnderline(estilo, true);
+        StyleConstants.setBold(estilo, true);
 
         int inicio = doc.getLength();
         insertar(doc, texto, estilo);
@@ -562,23 +577,11 @@ public class Renderizador {
     }
 
     public void aplicarTemaTextoCompleto(JTextPane area, boolean modoOscuro) {
-        StyledDocument doc = area.getStyledDocument();
-
-        Color colorTexto;
-        if (modoOscuro) {
-            colorTexto = Color.WHITE;
-        } else {
-            colorTexto = Color.BLACK;
+        if (renderAvanzado != null) {
+            renderAvanzado.aplicarTemaTextoCompleto(area, modoOscuro);
         }
 
-        SimpleAttributeSet estiloTexto = new SimpleAttributeSet();
-        StyleConstants.setForeground(estiloTexto, colorTexto);
-        StyleConstants.setFontSize(estiloTexto, 14);
-
-        doc.setCharacterAttributes(0, doc.getLength(), estiloTexto, false);
-
         aplicarTemaEnlaces(area, modoOscuro);
-        reaplicarErroresRender(area);
     }
 
     public String obtenerTitulo(String ruta) {
@@ -705,33 +708,30 @@ public class Renderizador {
 
         String texto = area.getText();
 
-        String buscar = "No se puede renderizar";
+        String[] lineas = texto.split("\n");
 
-        int posicion = texto.indexOf(buscar);
+        int posicionActual = 0;
 
-        while (posicion != -1) {
+        for (String linea : lineas) {
 
-            int fin = texto.indexOf("\n", posicion);
+            if (linea.toLowerCase().contains("renderizar")) {
 
-            if (fin == -1) {
-                fin = texto.length();
+                SimpleAttributeSet estilo = new SimpleAttributeSet();
+
+                StyleConstants.setForeground(estilo, Color.RED);
+                StyleConstants.setBold(estilo, true);
+                StyleConstants.setFontSize(estilo, 14);
+
+                doc.setCharacterAttributes(
+                        posicionActual,
+                        linea.length(),
+                        estilo,
+                        false
+                );
             }
 
-            SimpleAttributeSet estilo = new SimpleAttributeSet();
-
-            StyleConstants.setForeground(estilo, Color.RED);
-            StyleConstants.setBold(estilo, true);
-            StyleConstants.setFontSize(estilo, 14);
-
-            doc.setCharacterAttributes(
-                    posicion,
-                    fin - posicion,
-                    estilo,
-                    false
-            );
-
-            posicion = texto.indexOf(buscar, fin);
+            posicionActual += linea.length() + 1;
         }
     }
-}
 
+}
