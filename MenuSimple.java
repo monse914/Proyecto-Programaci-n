@@ -119,17 +119,7 @@ public class MenuSimple extends JMenuBar {
     }
 
     private void cambiarColorTexto(JTextPane areaTexto, Color color) {
-        StyledDocument doc = areaTexto.getStyledDocument();
-
-        if (doc.getLength() == 0) {
-            areaTexto.setForeground(color);
-            return;
-        }
-
-        SimpleAttributeSet estilo = new SimpleAttributeSet();
-        StyleConstants.setForeground(estilo, color);
-
-        doc.setCharacterAttributes(0, doc.getLength(), estilo, false);
+        areaTexto.setForeground(color);
         areaTexto.repaint();
     }
 
