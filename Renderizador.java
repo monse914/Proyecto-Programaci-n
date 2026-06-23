@@ -160,57 +160,51 @@ public class Renderizador {
                 String t = token.trim().toLowerCase();
 
                 if (t.matches("(?is)<h1[^>]*>")) {
-
+                    insertar(doc, "\n", estiloNormal);
                     estiloActual = estiloTitulo;
-
+                    
                 } else if (t.matches("(?is)</h1>")) {
-
-                    insertar(doc, "\n\n", estiloNormal);
+                    insertar(doc, "\n", estiloNormal);
                     estiloActual = estiloNormal;
-
+                    
                 } else if (t.matches("(?is)<h2[^>]*>")) {
-
+                    insertar(doc, "\n", estiloNormal);
                     estiloActual = crearEstiloH2();
-
+                    
                 } else if (t.matches("(?is)</h2>")) {
-
-                    insertar(doc, "\n\n", estiloNormal);
+                    insertar(doc, "\n", estiloNormal);
                     estiloActual = estiloNormal;
-
+                    
                 } else if (t.matches("(?is)<h3[^>]*>")) {
-
+                    insertar(doc, "\n", estiloNormal);
                     estiloActual = crearEstiloH3();
-
+                    
                 } else if (t.matches("(?is)</h3>")) {
-
-                    insertar(doc, "\n\n", estiloNormal);
+                    insertar(doc, "\n", estiloNormal);
                     estiloActual = estiloNormal;
-
+                    
                 } else if (t.matches("(?is)<h4[^>]*>")) {
-
+                    insertar(doc, "\n", estiloNormal);
                     estiloActual = crearEstiloH4();
-
+                    
                 } else if (t.matches("(?is)</h4>")) {
-
-                    insertar(doc, "\n\n", estiloNormal);
+                    insertar(doc, "\n", estiloNormal);
                     estiloActual = estiloNormal;
-
+                    
                 } else if (t.matches("(?is)<h5[^>]*>")) {
-
+                    insertar(doc, "\n", estiloNormal);
                     estiloActual = crearEstiloH5();
-
+                    
                 } else if (t.matches("(?is)</h5>")) {
-
-                    insertar(doc, "\n\n", estiloNormal);
+                    insertar(doc, "\n", estiloNormal);
                     estiloActual = estiloNormal;
-
+                    
                 } else if (t.matches("(?is)<h6[^>]*>")) {
-
+                    insertar(doc, "\n", estiloNormal);
                     estiloActual = crearEstiloH6();
 
                 } else if (t.matches("(?is)</h6>")) {
-
-                    insertar(doc, "\n\n", estiloNormal);
+                    insertar(doc, "\n", estiloNormal);
                     estiloActual = estiloNormal;
 
                 } else if (t.matches("(?is)<b[^>]*>")) {
@@ -291,6 +285,15 @@ public class Renderizador {
             } else {
                 String texto = decodificarTextoNormal(token);
                 texto = compactarEspacios(texto);
+
+                try {
+                    int longitudDoc = doc.getLength();
+                    if (longitudDoc > 0 && doc.getText(longitudDoc - 1, 1).equals("\n")) {
+                        texto = texto.stripLeading();
+                    }
+                } catch (BadLocationException e) {
+
+                }
 
                 if (!texto.isEmpty()) {
                     if (hrefActual != null) {
