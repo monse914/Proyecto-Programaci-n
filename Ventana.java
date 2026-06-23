@@ -4,8 +4,12 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import javax.swing.*;
+import java.net.URL;
+import javax.swing.text.html.HTMLDocument;
+import javax.swing.text.html.HTMLEditorKit;
 
 public class Ventana extends JFrame {
+
     private Pestania pestaniaInicial;
     private JTabbedPane pestanas;
     private JLabel barraEstado;
@@ -13,11 +17,12 @@ public class Ventana extends JFrame {
     private Renderizador renderizador;
     private JLabel tituloVentana;
     private MenuSimple menu;
-    private Gemini gemini;
     private ClienteHTTP clienteHTTP;
     private Historial historial;
     private Favoritos favoritos;
     private NavegaOffline navegaOffline;
+    private MotorBusqueda motorBusqueda;
+    private Gemini gemini;
 
     private JPanel panelSuperior;
     private JPanel barraTitulo;
@@ -57,8 +62,9 @@ public class Ventana extends JFrame {
     private int frameYInicio;
 
     public Ventana(String urlInicial) {
+
         setUndecorated(true);
-        setSize(900, 600);
+        setSize(800, 600);
         setMinimumSize(new Dimension(400, 300));
         setLayout(new BorderLayout());
         setLocationRelativeTo(null);
@@ -68,6 +74,7 @@ public class Ventana extends JFrame {
         historial = new Historial();
         favoritos = new Favoritos();
         navegaOffline = new NavegaOffline();
+        motorBusqueda = new MotorBusqueda();
 
         pestanasPorUrl = new HashMap<>();
         etiquetasPestanas = new HashMap<>();
@@ -113,49 +120,6 @@ public class Ventana extends JFrame {
         barraBotones.add(btnMax);
         barraBotones.add(btnClose);
 
-        barraHist = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        barraHist.setOpaque(false);
-        
-        btnAtras = new JButton("🡠");
-        btnAdelante = new JButton("🡢");
-        
-        btnAtras.setEnabled(false);
-        btnAdelante.setEnabled(false);
-        
-        JButton[] botonesP = {btnAtras,btnAdelante};
-        for (JButton bp : botonesP) {
-            bp.setFocusPainted(false);
-            bp.setBorderPainted(false);
-            bp.setPreferredSize(new Dimension(50, 25));
-        }
-        
-        barraHist.add(btnAtras);
-        barraHist.add(btnAdelante);
-        
-        btnAtras.addActionListener(e -> {
-            Component comp = pestanas.getSelectedComponent();
-            if (comp instanceof Pestania) {
-                Pestania p = (Pestania) comp;
-                String url = p.atras();
-                if (url != null) {
-                    navegarEnPestaniaActual(p, url, false);
-                    actualizarBotonesNavegacion();
-                }
-            }
-        });
-        
-        btnAdelante.addActionListener(e -> {
-            Component comp = pestanas.getSelectedComponent();
-            if (comp instanceof Pestania) {
-                Pestania p = (Pestania) comp;
-                String url = p.adelante();
-                if (url != null) {
-                    navegarEnPestaniaActual(p, url, false);
-                    actualizarBotonesNavegacion();
-                }
-            }
-        });
-
         JPanel izquierda = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
         izquierda.setOpaque(false);
         izquierda.add(tituloVentana);
@@ -179,25 +143,31 @@ public class Ventana extends JFrame {
         pestanas.setRequestFocusEnabled(false);
 
         pestanas.setUI(new javax.swing.plaf.basic.BasicTabbedPaneUI() {
+
             @Override
             protected void installDefaults() {
                 super.installDefaults();
                 contentBorderInsets = new Insets(0, 0, 0, 0);
                 tabAreaInsets = new Insets(0, 0, 0, 0);
             }
+
             @Override
             protected int calculateTabAreaHeight(int tabPlacement, int horizRunCount, int maxTabHeight) {
                 return 0;
             }
+
             @Override
             protected void paintContentBorder(Graphics g, int tabPlacement, int selectedIndex) {
             }
+
             @Override
             protected void paintFocusIndicator(Graphics g, int tabPlacement, Rectangle[] rects, int tabIndex, Rectangle iconRect, Rectangle textRect, boolean isSelected) {
             }
+
             @Override
             protected void paintTabBorder(Graphics g, int tabPlacement, int tabIndex, int x, int y, int w, int h, boolean isSelected) {
             }
+
             @Override
             protected void paintTabBackground(Graphics g, int tabPlacement, int tabIndex, int x, int y, int w, int h, boolean isSelected) {
             }
@@ -215,12 +185,16 @@ public class Ventana extends JFrame {
 
         pestaniaInicial = new Pestania();
 
-        menu = new MenuSimple(
-                pestaniaInicial.getAreaContenido(),
-                this::aplicarTemaGeneral,
-                this::mostrarHistorial
-        );
-        pestaniaInicial.getBarraNavegacion().configurarMenuOpciones(menu);
+        menu = new MenuSimple(pestaniaInicial.getAreaContenido(), (modoOscuro, fondo, texto) -> {
+            if (modoOscuro) {
+                aplicarTemaGeneral(true, new Color(22, 22, 24), new Color(255, 230, 235));
+            } else {
+                aplicarTemaGeneral(false, new Color(255, 240, 243), new Color(74, 20, 32));
+            }
+        }, () -> {
+            String hist = historial.mostrarHistorial();
+            JOptionPane.showMessageDialog(this, hist, "Historial", JOptionPane.INFORMATION_MESSAGE);
+        });
 
         configurarPestania(pestaniaInicial);
         agregarPestana("Inicio", pestaniaInicial, null);
@@ -257,7 +231,8 @@ public class Ventana extends JFrame {
 
         add(panelEstado, BorderLayout.SOUTH);
 
-        aplicarTemaGeneral(false, Color.WHITE, Color.BLACK);
+        aplicarTemaGeneral(false, new Color(255, 240, 243), new Color(74, 20, 32));
+        actualizarEstadoModo();
 
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 
@@ -270,6 +245,7 @@ public class Ventana extends JFrame {
         habilitarRedimensionamiento();
 
         setVisible(true);
+
         crearBotonFlotanteIA();
 
         if (urlInicial != null && !urlInicial.isEmpty()) {
@@ -279,11 +255,10 @@ public class Ventana extends JFrame {
     }
 
     private void confirmarCierre() {
-        int opcion = JOptionPane.showConfirmDialog(
+        int opcion = mostrarConfirmacionRosada(
                 this,
                 "¿Estás seguro que deseas cerrar la aplicación?",
-                "Confirmar salida",
-                JOptionPane.YES_NO_OPTION
+                "Confirmar salida"
         );
 
         if (opcion == JOptionPane.YES_OPTION) {
@@ -296,14 +271,14 @@ public class Ventana extends JFrame {
         detectarHoverLinks(pestania.getAreaContenido());
 
         pestania.getBarraNavegacion().setAccionNavegacion(url -> {
-            navegarEnPestaniaActual(pestania, url, true);
+            navegarEnPestaniaActual(pestania, url);
         });
 
         pestania.getBarraNavegacion().setAccionRecargar(() -> {
             String url = pestania.getUrlActual();
 
             if (url != null && !url.isEmpty()) {
-                navegarEnPestaniaActual(pestania, url, false);
+                navegarEnPestaniaActual(pestania, url);
             }
         });
 
@@ -330,7 +305,7 @@ public class Ventana extends JFrame {
             String url = pestania.atras();
 
             if (url != null) {
-                navegarEnPestaniaActual(pestania, url, false);
+                cargarPaginaSegunTipo(pestania, url);
             }
 
             actualizarBotonesHistorial(pestania);
@@ -340,10 +315,14 @@ public class Ventana extends JFrame {
             String url = pestania.adelante();
 
             if (url != null) {
-                navegarEnPestaniaActual(pestania, url, false);
+                cargarPaginaSegunTipo(pestania, url);
             }
 
             actualizarBotonesHistorial(pestania);
+        });
+
+        pestania.getBarraNavegacion().setAccionMotorBusqueda(() -> {
+            mostrarMotorBusqueda(pestania);
         });
     }
 
@@ -359,14 +338,11 @@ public class Ventana extends JFrame {
     }
 
     private void cambiarModoNavegacion(Pestania pestania) {
-
         navegaOffline.cambiarModo();
         actualizarTextoBotonesModo();
+        actualizarEstadoModo();
 
         if (navegaOffline.estaEnModoOffline()) {
-
-            barraEstado.setText(" Modo Offline");
-
             String archivo = navegaOffline.seleccionarArchivoHTML(this);
 
             if (archivo == null) {
@@ -382,27 +358,23 @@ public class Ventana extends JFrame {
             }
 
             pestania.getBarraNavegacion().setURL(archivo);
-            navegarEnPestaniaActual(pestania, archivo, true);
-
-        } else {
-
-            barraEstado.setText(" Modo Online");
+            navegarEnPestaniaActual(pestania, archivo);
         }
     }
 
     private void actualizarTextoBotonesModo() {
         int i = 0;
+        boolean esOffline = navegaOffline.estaEnModoOffline();
+        Icon iconoColor = esOffline ? crearIconoCirculo(Color.RED) : crearIconoCirculo(new Color(34, 139, 34));
 
         while (i < pestanas.getTabCount()) {
             Component comp = pestanas.getComponentAt(i);
 
             if (comp instanceof Pestania) {
                 Pestania p = (Pestania) comp;
-                p.getBarraNavegacion().setTextoModo(
-                        navegaOffline.estaEnModoOffline()
-                );
-            }
 
+                p.getBarraNavegacion().setTextoModo(esOffline);
+            }
             i++;
         }
     }
@@ -526,32 +498,50 @@ public class Ventana extends JFrame {
         String url = listaFavoritos.get(index).getUrl();
 
         if (pestaniaActual != null) {
-            navegarEnPestaniaActual(pestaniaActual, url, true);
+            navegarEnPestaniaActual(pestaniaActual, url);
         } else {
             abrirUrlEnPestana(url);
         }
     }
 
-    private void navegarEnPestaniaActual(Pestania pestania, String url, boolean agregarAlHistorial) {
+    private void navegarEnPestaniaActual(Pestania pestania, String url) {
         if (url == null || url.trim().isEmpty()) {
             return;
         }
 
         url = url.trim();
 
+        boolean esArchivoLocal = url.startsWith("file:///") || url.toLowerCase().endsWith(".html") || url.toLowerCase().endsWith(".htm");
+
+        if (pestania.getEstado() != null && pestania.getEstado().equals("Motor de búsqueda") && !esArchivoLocal) {
+            if (navegaOffline.estaEnModoOffline()) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Estás en modo offline. No puedes realizar búsquedas en internet, solo abrir archivos HTML locales.",
+                        "Modo Offline",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+            mostrarResultadosBusqueda(pestania, url);
+            return;
+        }
+
         if (navegaOffline.estaEnModoOffline()) {
             if (!url.startsWith("file:///")) {
-                JOptionPane.showMessageDialog(this,
+                JOptionPane.showMessageDialog(
+                        this,
                         "Estás en modo offline. Solo puedes abrir archivos HTML del computador."
                 );
                 return;
             }
+
             cargarPaginaEnComponente(url, pestania);
             return;
         }
-        
+
         if (!url.startsWith("file:///")) {
-            cargarPaginaWebEnPestania(pestania, url, agregarAlHistorial);
+            cargarPaginaWebEnPestania(pestania, url);
             return;
         }
 
@@ -565,7 +555,25 @@ public class Ventana extends JFrame {
             return;
         }
 
+        pestania.getAreaContenido().removeAll();
+        pestania.getAreaContenido().setLayout(null);
+
         cargarPaginaEnComponente(urlNormalizada, pestania);
+    }
+
+    private void cargarPaginaSegunTipo(Pestania pestania, String url) {
+
+        if (url == null || url.trim().isEmpty()) {
+            return;
+        }
+
+        url = url.trim();
+
+        if (url.startsWith("file:///")) {
+            cargarPaginaEnComponente(url, pestania);
+        } else {
+            cargarPaginaWebEnPestania(pestania, url);
+        }
     }
 
     private void abrirUrlEnPestana(String url) {
@@ -582,7 +590,7 @@ public class Ventana extends JFrame {
             agregarPestana(url, nuevaPestania, null);
             pestanas.setSelectedComponent(nuevaPestania);
 
-            cargarPaginaWebEnPestania(nuevaPestania, url, true);
+            cargarPaginaWebEnPestania(nuevaPestania, url);
             return;
         }
 
@@ -605,82 +613,140 @@ public class Ventana extends JFrame {
         cargarPaginaEnComponente(urlNormalizada, nuevaPestania);
     }
 
-    private void cargarPaginaWebEnPestania(Pestania pestania, String url, boolean esta) {
-        if (esDominio(url)) {
-            barraEstado.setText(" Dominio detectado: " + url);
-        }else if (esIP(url)) {
-            barraEstado.setText(" Dirección IP detectada: " + url);
-        }else if (esIPmasPuerto(url)) {
-            barraEstado.setText(" IP con puerto detectada: " + url);
-        }
-        String urlMostrada = url.trim();
-        
-        if (!urlMostrada.startsWith("http://") && !urlMostrada.startsWith("https://")) {
-            if (esDominio(urlMostrada) || esIP(urlMostrada) || esIPmasPuerto(urlMostrada)) {
-                urlMostrada = "https://" + urlMostrada;
+    private void cargarPaginaWebEnPestania(Pestania pestania, String url) {
+        if (url.contains(":")) {
+            String[] partes = url.split(":");
+            if (partes.length > 1) {
+                String puertoStr = partes[partes.length - 1].replaceAll("[^0-9]", "");
+                if (!puertoStr.isEmpty()) {
+                    int puerto = Integer.parseInt(puertoStr);
+                    if (puerto != 80 && puerto != 8080 && puerto != 443 && puerto != 3000 && puerto != 5173) {
+                        String mensajeError = "Conexión a puerto " + puerto + " no soportada";
+
+                        JTextPane area = pestania.getAreaContenido();
+                        area.removeAll();
+                        area.setLayout(null);
+                        area.setContentType("text/plain");
+                        area.setText("Error:\n" + mensajeError);
+
+                        barraEstado.setText(" " + mensajeError);
+                        JOptionPane.showMessageDialog(this, mensajeError, "Error de Puerto", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                }
             }
         }
 
+        String urlMostrada = url;
+
+        if (!urlMostrada.startsWith("http://")
+                && !urlMostrada.startsWith("https://")) {
+
+            urlMostrada = "http://" + urlMostrada;
+        }
         pestania.setUrlActual(urlMostrada);
         pestania.getBarraNavegacion().setURL(urlMostrada);
-        if (esta) {
-            pestania.navegar(urlMostrada);
-        }
+        pestania.navegar(urlMostrada);
         actualizarBotonesHistorial(pestania);
-        actualizarBotonesNavegacion();
 
         mostrarEstadoCargando();
+
+        JTextPane areaDestino = pestania.getAreaContenido();
+        areaDestino.removeAll();
+        areaDestino.setLayout(null);
 
         String finalUrl = urlMostrada;
 
         SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
+
             @Override
             protected String doInBackground() throws Exception {
                 return clienteHTTP.obtenerRespuesta(finalUrl);
             }
+
             @Override
             protected void done() {
+
                 try {
+
                     String html = get();
+
                     JTextPane area = pestania.getAreaContenido();
-                    
+
                     area.setContentType("text/html");
                     area.setEditable(false);
+
+                    HTMLEditorKit kit = new HTMLEditorKit();
+                    HTMLDocument doc = (HTMLDocument) kit.createDefaultDocument();
+
+                    doc.setBase(new URL(finalUrl));
+
+                    area.setEditorKit(kit);
+                    area.setDocument(doc);
+
                     area.setText(html);
+
                     area.setCaretPosition(0);
 
                     String estado = clienteHTTP.getEstado();
+
                     pestania.setEstado(estado);
+
                     barraEstado.setText(" " + estado);
+
                     String tituloPagina = obtenerTituloDesdeHTML(html, finalUrl);
+
                     historial.agregar(finalUrl, tituloPagina);
+
                     actualizarTituloPestana(pestania, tituloPagina);
+
                     actualizarEstrellaFavorito(pestania);
+
                 } catch (Exception e) {
+
                     JTextPane area = pestania.getAreaContenido();
+
+                    area.removeAll();
+                    area.setLayout(null);
                     area.setContentType("text/plain");
+
                     String mensaje = e.getMessage();
+
                     if (mensaje == null || mensaje.trim().isEmpty()) {
                         mensaje = "Error de conexión";
                     }
+
                     if (mensaje.startsWith("java.io.IOException: ")) {
                         mensaje = mensaje.substring("java.io.IOException: ".length());
                     }
-                    area.setText("Error de conexión:\n" + mensaje);
+
+                    area.setText(
+                            "Error de conexión:\n" + mensaje
+                    );
+
                     barraEstado.setText(" " + mensaje);
-                    JOptionPane.showMessageDialog(Ventana.this, mensaje);
+
+                    JOptionPane.showMessageDialog(
+                            Ventana.this,
+                            mensaje
+                    );
                 }
             }
         };
+
         worker.execute();
     }
 
     private void cargarPaginaEnComponente(String url, Component componente) {
         String urlNormalizada = normalizarUrl(url);
+
         mostrarEstadoCargando();
+
         Timer timer = new Timer(350, e -> {
+
             try {
                 String ruta = obtenerRutaArchivo(urlNormalizada);
+
                 Pestania pestania = (Pestania) componente;
                 JTextPane area = pestania.getAreaContenido();
 
@@ -693,6 +759,7 @@ public class Ventana extends JFrame {
                 if (titulo == null || titulo.isEmpty() || titulo.equals("Sin título")) {
                     titulo = new File(ruta).getName();
                 }
+
                 if (titulo.length() > 20) {
                     titulo = titulo.substring(0, 20) + "...";
                 }
@@ -705,7 +772,6 @@ public class Ventana extends JFrame {
 
                 pestania.setUrlActual(urlNormalizada);
                 pestania.navegar(urlNormalizada);
-                actualizarBotonesNavegacion();
                 actualizarBotonesHistorial(pestania);
                 pestania.getBarraNavegacion().setURL(urlNormalizada);
 
@@ -718,6 +784,7 @@ public class Ventana extends JFrame {
                 manejarErrorDeCarga(ex, area);
             }
         });
+
         timer.setRepeats(false);
         timer.start();
     }
@@ -728,18 +795,21 @@ public class Ventana extends JFrame {
         if (mensaje == null) {
             mensaje = "Error al cargar archivo";
         }
+
         if (mensaje.equals("Error: El archivo no es HTML")) {
             area.setText("Error: El archivo no es HTML");
             barraEstado.setText(" Error: Formato no soportado");
             JOptionPane.showMessageDialog(this, "Error: El archivo no es HTML");
             return;
         }
+
         if (mensaje.equals("Error: Archivo no encontrado")) {
             area.setText("Error: Archivo no encontrado");
             barraEstado.setText(" Error: Archivo no encontrado");
             JOptionPane.showMessageDialog(this, "Error: Archivo no encontrado");
             return;
         }
+
         area.setText(mensaje);
         barraEstado.setText(" Error");
         JOptionPane.showMessageDialog(this, mensaje);
@@ -749,6 +819,7 @@ public class Ventana extends JFrame {
         if (!url.startsWith("file:///")) {
             return url;
         }
+
         return url.substring(8);
     }
 
@@ -756,14 +827,17 @@ public class Ventana extends JFrame {
         if (url == null) {
             return null;
         }
+
         url = url.trim();
 
         if (!url.startsWith("file:///")) {
             return url;
         }
+
         try {
             String ruta = url.substring(8);
             File archivo = new File(ruta);
+
             return "file:///" + archivo.getCanonicalPath().replace("\\", "/");
         } catch (Exception e) {
             return url;
@@ -790,6 +864,7 @@ public class Ventana extends JFrame {
     }
 
     private void agregarBotonNuevaPestana() {
+
         btnNuevaPestana = new JButton("+");
 
         aplicarEstiloBotonIcono(btnNuevaPestana);
@@ -797,65 +872,121 @@ public class Ventana extends JFrame {
         btnNuevaPestana.setContentAreaFilled(true);
         btnNuevaPestana.setBackground(Color.WHITE);
 
-        btnNuevaPestana.setPreferredSize(new Dimension(28, 22));
-
-        btnNuevaPestana.setFont(
-            btnNuevaPestana.getFont().deriveFont(Font.BOLD, 14f)
+        btnNuevaPestana.setPreferredSize(
+                new Dimension(28, 22)
         );
 
-        btnNuevaPestana.setMargin(new Insets(-1, 0, 0, 0));
+        btnNuevaPestana.setFont(
+                btnNuevaPestana.getFont().deriveFont(
+                        Font.BOLD,
+                        14f
+                )
+        );
+
+        btnNuevaPestana.setMargin(
+                new Insets(-1, 0, 0, 0)
+        );
 
         btnNuevaPestana.setBackground(Color.WHITE);
         btnNuevaPestana.setForeground(Color.BLACK);
 
         btnNuevaPestana.setBorder(
-            BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(
-                    new Color(210, 210, 210), 1, true),
-                BorderFactory.createEmptyBorder(1, 5, 1, 5)
-            )
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(
+                                new Color(210, 210, 210),
+                                1,
+                                true
+                        ),
+                        BorderFactory.createEmptyBorder(
+                                1,
+                                5,
+                                1,
+                                5
+                        )
+                )
         );
 
         btnNuevaPestana.addMouseListener(
-            new MouseAdapter() {
-                public void mouseEntered(MouseEvent e) {
-                    btnNuevaPestana.setBackground(new Color(180, 215, 255));
+                new MouseAdapter() {
+
+                    public void mouseEntered(MouseEvent e) {
+
+                        btnNuevaPestana.setBackground(
+                                new Color(180, 215, 255)
+                        );
+                    }
+
+                    public void mouseExited(MouseEvent e) {
+
+                        btnNuevaPestana.setBackground(
+                                Color.WHITE
+                        );
+                    }
                 }
-                public void mouseExited(MouseEvent e) {
-                    btnNuevaPestana.setBackground(Color.WHITE);
-                }
-            }
         );
 
-        btnNuevaPestana.addActionListener(e -> crearNuevaPestanaVacia());
+        btnNuevaPestana.addActionListener(
+                e -> crearNuevaPestanaVacia()
+        );
+
         actualizarBarraPestanasVisual();
     }
 
     private void actualizarBarraPestanasVisual() {
+
         if (barraPestanasVisual == null) {
             return;
         }
+
         barraPestanasVisual.removeAll();
-        
-        for(int i = 0; i > pestanas.getTabCount(); i++){
+
+        int i = 0;
+
+        while (i < pestanas.getTabCount()) {
+
             Component comp = pestanas.getComponentAt(i);
+
             if (comp instanceof Pestania) {
+
                 String titulo = pestanas.getTitleAt(i);
-                JPanel tabVisual = crearBotonPestanaSuperior(comp, titulo);
+
+                JPanel tabVisual =
+                        crearBotonPestanaSuperior(comp, titulo);
+
                 barraPestanasVisual.add(tabVisual);
             }
+
+            i++;
         }
 
         if (btnNuevaPestana != null) {
-            JPanel panelMas = new JPanel(new FlowLayout(
-                FlowLayout.LEFT, 0, 0));
+
+            JPanel panelMas =
+                    new JPanel(new FlowLayout(
+                            FlowLayout.LEFT,
+                            0,
+                            0
+                    ));
+
             panelMas.setOpaque(false);
-            panelMas.setPreferredSize(new Dimension(38, 22));
-            panelMas.setMinimumSize(new Dimension(38, 22));
-            panelMas.setMaximumSize(new Dimension(38, 22));
+
+            panelMas.setPreferredSize(
+                    new Dimension(38, 22)
+            );
+
+            panelMas.setMinimumSize(
+                    new Dimension(38, 22)
+            );
+
+            panelMas.setMaximumSize(
+                    new Dimension(38, 22)
+            );
+
             panelMas.add(btnNuevaPestana);
+
             barraPestanasVisual.add(panelMas);
         }
+
         barraPestanasVisual.revalidate();
         barraPestanasVisual.repaint();
     }
@@ -864,9 +995,10 @@ public class Ventana extends JFrame {
         JPanel panel = new JPanel(new BorderLayout(4, 0));
 
         panel.setPreferredSize(new Dimension(145, 24));
+
         panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(210,210,210), 1, true),
-            BorderFactory.createEmptyBorder(0, 10, 0, 2)
+                BorderFactory.createLineBorder(new Color(255,230,230), 1, true),
+                BorderFactory.createEmptyBorder(0, 10, 0, 2)
         ));
 
         boolean seleccionada = pestanas.getSelectedComponent() == componentePestana;
@@ -874,7 +1006,7 @@ public class Ventana extends JFrame {
         if (seleccionada) {
             panel.setBackground(Color.WHITE);
         } else {
-            panel.setBackground(new Color(230, 230, 230));
+            panel.setBackground(new Color(255, 230, 230));
         }
 
         JLabel lblTitulo = new JLabel(titulo);
@@ -891,7 +1023,10 @@ public class Ventana extends JFrame {
         btnCerrar.setMargin(new Insets(-3,0,0,0));
         btnCerrar.setVerticalAlignment(SwingConstants.CENTER);
         btnCerrar.setHorizontalAlignment(SwingConstants.CENTER);
-        btnCerrar.setFont(btnCerrar.getFont().deriveFont(15f));
+        btnCerrar.setFont(
+                btnCerrar.getFont().deriveFont(15f)
+        );
+
         btnCerrar.setOpaque(false);
         btnCerrar.setContentAreaFilled(false);
 
@@ -911,7 +1046,7 @@ public class Ventana extends JFrame {
             public void mouseEntered(MouseEvent e) {
                 btnCerrar.setOpaque(true);
                 btnCerrar.setContentAreaFilled(true);
-                btnCerrar.setBackground(new Color(180, 215, 255));
+                btnCerrar.setBackground(new Color(230, 168, 184));
             }
 
             public void mouseExited(MouseEvent e) {
@@ -922,32 +1057,82 @@ public class Ventana extends JFrame {
 
         panel.add(lblTitulo, BorderLayout.CENTER);
         panel.add(btnCerrar, BorderLayout.EAST);
+
         return panel;
     }
 
     private void crearNuevaPestanaVacia() {
+
         Pestania nueva = new Pestania();
         configurarPestania(nueva);
+
         agregarPestana("Nueva pestaña", nueva, null);
         pestanas.setSelectedComponent(nueva);
+    }
+
+    private JPanel crearEncabezadoPestana(Component componentePestana, String titulo) {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        panel.setOpaque(false);
+
+        JLabel lblTitulo = new JLabel(titulo);
+        JButton btnCerrar = new JButton("x");
+
+        btnCerrar.setMargin(new Insets(0, 4, 0, 4));
+        btnCerrar.setFocusable(false);
+        btnCerrar.setBorderPainted(false);
+        btnCerrar.setBackground(new Color(255, 210, 220));
+        btnCerrar.setForeground(Color.BLACK);
+
+        btnCerrar.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) {
+                btnCerrar.setBackground(new Color(255, 160, 175));
+            }
+
+            public void mouseExited(MouseEvent e) {
+                btnCerrar.setBackground(new Color(255, 210, 220));
+            }
+        });
+
+        btnCerrar.addActionListener(e -> cerrarPestana(componentePestana));
+
+        MouseAdapter seleccionarPestana = new MouseAdapter() {
+            public void mousePressed(MouseEvent e) {
+                pestanas.setSelectedComponent(componentePestana);
+            }
+        };
+
+        panel.addMouseListener(seleccionarPestana);
+        lblTitulo.addMouseListener(seleccionarPestana);
+
+        panel.add(lblTitulo);
+        panel.add(btnCerrar);
+
+        return panel;
     }
 
     private void cerrarPestana(Component componente) {
         if (!(componente instanceof Pestania)) {
             return;
         }
+
         int index = pestanas.indexOfComponent(componente);
+
         if (index == -1) {
             return;
         }
+
         int indexUltimaPestanaReal = obtenerIndexUltimaPestanaReal();
+
         if (index == indexUltimaPestanaReal) {
-            JOptionPane.showMessageDialog(this,
-                "No puedes eliminar la última pestaña");
+            JOptionPane.showMessageDialog(
+                    this,
+                    "No puedes eliminar la última pestaña"
+            );
             return;
         }
 
         Pestania pestania = (Pestania) componente;
+
         String url = urlPorPestana.get(pestania);
 
         if (url != null) {
@@ -960,16 +1145,40 @@ public class Ventana extends JFrame {
         actualizarBarraPestanasVisual();
 
         pestania.liberarRecursos();
+
         System.gc();
     }
 
-    private int obtenerIndexUltimaPestanaReal() {
-        for (int i = pestanas.getTabCount() - 1; i >= 0; i--){
+    private int contarPestanasReales() {
+        int contador = 0;
+        int i = 0;
+
+        while (i < pestanas.getTabCount()) {
             Component comp = pestanas.getComponentAt(i);
+
+            if (comp instanceof Pestania) {
+                contador++;
+            }
+
+            i++;
+        }
+
+        return contador;
+    }
+
+    private int obtenerIndexUltimaPestanaReal() {
+        int i = pestanas.getTabCount() - 1;
+
+        while (i >= 0) {
+            Component comp = pestanas.getComponentAt(i);
+
             if (comp instanceof Pestania) {
                 return i;
             }
+
+            i--;
         }
+
         return -1;
     }
 
@@ -992,6 +1201,7 @@ public class Ventana extends JFrame {
         if (comp instanceof Pestania) {
             return ((Pestania) comp).getAreaContenido();
         }
+
         return pestaniaInicial.getAreaContenido();
     }
 
@@ -1002,22 +1212,24 @@ public class Ventana extends JFrame {
         }
     }
 
-    private void aplicarTemaGeneral(boolean modoOscuro, Color fondoArea, Color textoArea) {
+    void aplicarTemaGeneral(boolean modoOscuro, Color fondoArea, Color textoArea) {
         Color fondoPrincipal;
         Color fondoSecundario;
         Color textoPrincipal;
         Color fondoPestanas;
 
         if (modoOscuro) {
-            fondoPrincipal = new Color(45, 45, 45);
-            fondoSecundario = new Color(60, 60, 60);
-            textoPrincipal = Color.WHITE;
-            fondoPestanas = new Color(50, 50, 50);
+
+            fondoPrincipal = new Color(92, 28, 41);
+            fondoSecundario = new Color(22, 22, 24);
+            textoPrincipal = new Color(255, 230, 235);
+            fondoPestanas = new Color(30, 25, 26);
         } else {
-            fondoPrincipal = new Color(235, 235, 235);
-            fondoSecundario = new Color(240, 240, 240);
-            textoPrincipal = Color.BLACK;
-            fondoPestanas = new Color(225, 225, 225);
+
+            fondoPrincipal = new Color(255, 218, 224);
+            fondoSecundario = new Color(255, 240, 243);
+            textoPrincipal = new Color(74, 20, 32);
+            fondoPestanas = new Color(250, 200, 208);
         }
 
         getContentPane().setBackground(fondoSecundario);
@@ -1036,35 +1248,44 @@ public class Ventana extends JFrame {
 
         actualizarColoresBotones(modoOscuro);
 
-        for (int i = 0; i < pestanas.getTabCount(); i++){
+        int i = 0;
+        while (i < pestanas.getTabCount()) {
             Component comp = pestanas.getComponentAt(i);
+
             if (comp instanceof Pestania) {
                 Pestania p = (Pestania) comp;
                 p.aplicarTema(modoOscuro, fondoArea, textoArea, renderizador);
             }
+            i++;
         }
-        for (JLabel lbl : etiquetasPestanas.values()) {
-            if (lbl != null) {
-                lbl.setForeground(textoPrincipal);
-            }
+
+        if (btnNuevaPestana != null) {
+            btnNuevaPestana.setBackground(modoOscuro ? new Color(45, 45, 47) : new Color(255, 218, 224));
+            btnNuevaPestana.setForeground(modoOscuro ? Color.WHITE : new Color(74, 20, 32));
+            btnNuevaPestana.repaint();
         }
-        repaint();
     }
 
     private void mostrarHistorial() {
         java.util.List<Historial.EntradaHistorial> entradas = historial.getEntradas();
 
         if (entradas.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No hay páginas visitadas.",
-                "Historial", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(
+                    this,
+                    "No hay páginas visitadas.",
+                    "Historial",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
             return;
         }
 
         DefaultListModel<String> modelo = new DefaultListModel<>();
 
-        for (int i = 0; i < entradas.size(); i++){
+        int i = 0;
+        while (i < entradas.size()) {
             Historial.EntradaHistorial entrada = entradas.get(i);
             modelo.addElement(entrada.getTitulo() + " - " + entrada.getUrl());
+            i++;
         }
 
         JList<String> lista = new JList<>(modelo);
@@ -1104,6 +1325,7 @@ public class Ventana extends JFrame {
                 }
             }
         });
+
         dialogo.pack();
         dialogo.setLocationRelativeTo(this);
         dialogo.setVisible(true);
@@ -1128,18 +1350,28 @@ public class Ventana extends JFrame {
                     return titulo;
                 }
             }
-        } catch (Exception e) {}
+        } catch (Exception e) {
+        }
+
         return url;
     }
 
-    private void abrirSeleccionHistorial(JList<String> lista, java.util.List<Historial.EntradaHistorial> entradas) {
+    private void abrirSeleccionHistorial(
+            JList<String> lista,
+            java.util.List<Historial.EntradaHistorial> entradas
+    ) {
         int index = lista.getSelectedIndex();
 
         if (index < 0) {
-            JOptionPane.showMessageDialog(this, "Selecciona una página del historial.",
-                "Historial", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Selecciona una página del historial.",
+                    "Historial",
+                    JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
+
         Historial.EntradaHistorial entrada = entradas.get(index);
         String url = entrada.getUrl();
 
@@ -1147,7 +1379,7 @@ public class Ventana extends JFrame {
 
         if (comp instanceof Pestania) {
             Pestania pestaniaActual = (Pestania) comp;
-            navegarEnPestaniaActual(pestaniaActual, url, false);
+            navegarEnPestaniaActual(pestaniaActual, url);
         } else {
             abrirUrlEnPestana(url);
         }
@@ -1161,7 +1393,7 @@ public class Ventana extends JFrame {
             fondoBoton = new Color(65, 65, 65);
             textoBoton = Color.WHITE;
         } else {
-            fondoBoton = new Color(235, 235, 235);
+            fondoBoton = new Color(255, 209, 220);
             textoBoton = Color.BLACK;
         }
 
@@ -1179,6 +1411,7 @@ public class Ventana extends JFrame {
     }
 
     private void aplicarEstiloBotonIcono(JButton boton) {
+
         boton.setFocusPainted(false);
         boton.setBorderPainted(false);
         boton.setContentAreaFilled(false);
@@ -1205,7 +1438,7 @@ public class Ventana extends JFrame {
                         b.setBackground(new Color(230, 70, 70));
                         b.setForeground(Color.WHITE);
                     } else {
-                        b.setBackground(new Color(180, 215, 255));
+                        b.setBackground(new Color(230, 168, 184));
                         b.setForeground(Color.BLACK);
                     }
                 }
@@ -1373,19 +1606,18 @@ public class Ventana extends JFrame {
 
                 if (ruta != null) {
                     String urlNormalizada = normalizarUrl(ruta);
+
                     Component seleccionada = pestanas.getSelectedComponent();
 
                     if (seleccionada instanceof Pestania) {
-                        ((Pestania) seleccionada).getBarraNavegacion().setURL(urlNormalizada);
-                    }
+                        Pestania p = (Pestania) seleccionada;
 
-                    Pestania pestaniaExistente = pestanasPorUrl.get(urlNormalizada);
-
-                    if (pestaniaExistente != null) {
-                        pestanas.setSelectedComponent(pestaniaExistente);
-                        barraEstado.setText(" Listo");
-                    } else {
-                        abrirUrlEnPestana(urlNormalizada);
+                        if ("Motor de búsqueda".equals(p.getEstado()) || "Resultados de búsqueda".equals(p.getEstado())) {
+                            abrirUrlEnPestana(urlNormalizada);
+                        } else {
+                            p.getBarraNavegacion().setURL(urlNormalizada);
+                            navegarEnPestaniaActual(p, urlNormalizada);
+                        }
                     }
                 }
             }
@@ -1396,34 +1628,41 @@ public class Ventana extends JFrame {
         area.addMouseMotionListener(new MouseMotionAdapter() {
             public void mouseMoved(MouseEvent e) {
                 int pos = area.viewToModel(e.getPoint());
+
                 if (renderizador.esEnlace(area, pos)) {
                     area.setCursor(new Cursor(Cursor.HAND_CURSOR));
                 } else {
                     area.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
                 }
+
                 renderizador.resaltarEnlaceEn(pos, area, menu.isModoOscuro());
             }
         });
     }
 
     private void configurarAtajosTeclado() {
+
         KeyboardFocusManager.getCurrentKeyboardFocusManager()
-            .addKeyEventDispatcher(new KeyEventDispatcher() {
-            public boolean dispatchKeyEvent(KeyEvent e) {
-                if (e.getID() != KeyEvent.KEY_PRESSED) {
-                    return false;
-                }
-                if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_TAB && !e.isShiftDown()) {
-                    seleccionarSiguientePestanaReal();
-                    return true;
-                }
-                if (e.isControlDown() && e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_TAB) {
-                    seleccionarAnteriorPestanaReal();
-                    return true;
-                }
-                return false;
-            }
-        });
+                .addKeyEventDispatcher(new KeyEventDispatcher() {
+                    public boolean dispatchKeyEvent(KeyEvent e) {
+
+                        if (e.getID() != KeyEvent.KEY_PRESSED) {
+                            return false;
+                        }
+
+                        if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_TAB && !e.isShiftDown()) {
+                            seleccionarSiguientePestanaReal();
+                            return true;
+                        }
+
+                        if (e.isControlDown() && e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_TAB) {
+                            seleccionarAnteriorPestanaReal();
+                            return true;
+                        }
+
+                        return false;
+                    }
+                });
     }
 
     private void seleccionarSiguientePestanaReal() {
@@ -1433,15 +1672,20 @@ public class Ventana extends JFrame {
         }
 
         int actual = pestanas.getSelectedIndex();
-        for (int i = actual + 1; i != actual; i++){
+        int i = actual + 1;
+
+        while (i != actual) {
             if (i >= total) {
                 i = 0;
             }
+
             Component comp = pestanas.getComponentAt(i);
             if (comp instanceof Pestania) {
                 pestanas.setSelectedIndex(i);
                 return;
             }
+
+            i++;
         }
     }
 
@@ -1452,18 +1696,22 @@ public class Ventana extends JFrame {
         }
 
         int actual = pestanas.getSelectedIndex();
-        for (int i = actual - 1; i != actual; i--){
+        int i = actual - 1;
+
+        while (i != actual) {
             if (i < 0) {
                 i = total - 1;
             }
+
             Component comp = pestanas.getComponentAt(i);
             if (comp instanceof Pestania) {
                 pestanas.setSelectedIndex(i);
                 return;
             }
+
+            i--;
         }
     }
-    
     private boolean esDominio(String texto) {
         return texto.matches("^(www\\.)?[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)+(:[0-9]{1,5})?$");
     }
@@ -1475,25 +1723,258 @@ public class Ventana extends JFrame {
     private boolean esIPmasPuerto(String texto){
         return texto.matches("^((25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})\\.){3}" + "(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2}):[0-9]{1,5}$");
     }
-    
+
+    private boolean esDireccionWeb(String texto) {
+        return texto.startsWith("http://")
+                || texto.startsWith("https://")
+                || esDominio(texto)
+                || esIP(texto)
+                || esIPmasPuerto(texto);
+    }
+
+    private void actualizarEstadoModo() {
+        if (navegaOffline.estaEnModoOffline()) {
+            barraEstado.setText(" Modo Offline");
+            barraEstado.setIcon(crearIconoCirculo(Color.RED));
+        } else {
+            barraEstado.setText(" Modo Online");
+            barraEstado.setIcon(crearIconoCirculo(new Color(34, 139, 34))); // Un verde bosque más visible que el Color.GREEN puro
+        }
+    }
+
+    private void mostrarMotorBusqueda(Pestania pestania) {
+        if (pestania == null) return;
+
+        JTextPane area = pestania.getAreaContenido();
+        area.removeAll();
+
+        area.setEditorKit(new javax.swing.text.StyledEditorKit());
+        area.setContentType("text/plain");
+        area.setEditable(false);
+
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(area.getBackground());
+
+        int tamanoLogo = 90;
+        JPanel logoPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_NORMALIZE);
+
+                Color colorLogo = menu.isModoOscuro() ? new Color(255, 218, 224) : new Color(139, 58, 71);
+                g2.setColor(colorLogo);
+
+                g2.setStroke(new BasicStroke(3.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                int cx = getWidth() / 2;
+                int cy = getHeight() / 2;
+
+                for (int i = 0; i < 4; i++) {
+                    double angulo = Math.toRadians(i * 90 + 45);
+                    int rx = (int) (cx + Math.cos(angulo) * 16);
+                    int ry = (int) (cy + Math.sin(angulo) * 16);
+                    g2.drawOval(rx - 18, ry - 18, 36, 36);
+                }
+
+                // Núcleo del sistema
+                g2.setStroke(new BasicStroke(2.0f));
+                g2.drawOval(cx - 8, cy - 8, 16, 16);
+                g2.dispose();
+            }
+        };
+        logoPanel.setPreferredSize(new Dimension(tamanoLogo, tamanoLogo));
+        logoPanel.setOpaque(false);
+
+        JLabel titulo = new JLabel("Las Recursivas");
+        titulo.setFont(new Font("Segoe UI", Font.BOLD, 38));
+        titulo.setForeground(area.getForeground());
+
+        JLabel subtitulo = new JLabel("MOTOR DE BÚSQUEDA");
+        subtitulo.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        subtitulo.setForeground(menu.isModoOscuro() ? new Color(180, 150, 155) : new Color(120, 100, 105));
+
+        JTextField campoBusqueda = new JTextField(30) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 15, 15);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        campoBusqueda.setPreferredSize(new Dimension(420, 38));
+        campoBusqueda.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        campoBusqueda.setCaretColor(area.getForeground());
+        campoBusqueda.setOpaque(false);
+
+        if (menu.isModoOscuro()) {
+            campoBusqueda.setBackground(new Color(40, 40, 42));
+        } else {
+            campoBusqueda.setBackground(Color.WHITE);
+        }
+        campoBusqueda.setForeground(area.getForeground());
+
+        campoBusqueda.setBorder(BorderFactory.createCompoundBorder(
+                new javax.swing.border.AbstractBorder() {
+                    @Override
+                    public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+                        Graphics2D g2 = (Graphics2D) g.create();
+                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        g2.setColor(menu.isModoOscuro() ? new Color(92, 28, 41) : new Color(200, 200, 200));
+                        g2.drawRoundRect(x, y, width - 1, height - 1, 15, 15);
+                        g2.dispose();
+                    }
+                },
+                BorderFactory.createEmptyBorder(0, 12, 0, 12)
+        ));
+
+        JButton botonBuscar = new JButton("Buscar") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        botonBuscar.setPreferredSize(new Dimension(105, 38));
+        botonBuscar.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        botonBuscar.setFocusPainted(false);
+        botonBuscar.setBorderPainted(false);
+        botonBuscar.setContentAreaFilled(false);
+        botonBuscar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        Color colorBtnNormal = menu.isModoOscuro() ? new Color(92, 28, 41) : new Color(255, 218, 224);
+        Color colorBtnHover = menu.isModoOscuro() ? new Color(139, 58, 71) : new Color(250, 200, 208);
+
+        botonBuscar.setBackground(colorBtnNormal);
+        botonBuscar.setForeground(menu.isModoOscuro() ? Color.WHITE : new Color(74, 20, 32));
+
+        botonBuscar.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                botonBuscar.setBackground(colorBtnHover);
+            }
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                botonBuscar.setBackground(colorBtnNormal);
+            }
+        });
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(6, 8, 6, 8);
+
+        gbc.gridx = 0; gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        panel.add(logoPanel, gbc);
+
+        gbc.gridy = 1;
+        gbc.insets = new Insets(0, 8, 2, 8);
+        panel.add(titulo, gbc);
+
+        gbc.gridy = 2;
+        gbc.insets = new Insets(0, 8, 25, 8);
+        panel.add(subtitulo, gbc);
+
+        gbc.gridy = 3; gbc.gridwidth = 1;
+        gbc.insets = new Insets(6, 8, 6, 8);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(campoBusqueda, gbc);
+
+        gbc.gridx = 1;
+        gbc.fill = GridBagConstraints.NONE;
+        panel.add(botonBuscar, gbc);
+
+        Runnable accionBuscar = () -> {
+            if (navegaOffline.estaEnModoOffline()) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Estás en modo offline. No puedes realizar búsquedas en internet, solo abrir archivos HTML locales.",
+                        "Modo Offline",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+            String texto = campoBusqueda.getText().trim();
+            if (!texto.isEmpty()) {
+                mostrarResultadosBusqueda(pestania, texto);
+            }
+        };
+
+        botonBuscar.addActionListener(e -> { accionBuscar.run(); });
+        campoBusqueda.addActionListener(e -> accionBuscar.run());
+
+        area.setText("");
+        area.setLayout(new BorderLayout());
+        area.add(panel, BorderLayout.CENTER);
+        area.revalidate();
+        area.repaint();
+
+        pestania.setEstado("Motor de búsqueda");
+        barraEstado.setText(" Motor de búsqueda");
+        actualizarTituloPestana(pestania, "Las Recursivas ❖");
+    }
+
+    private void mostrarResultadosBusqueda(Pestania pestania, String texto) {
+        if (pestania == null) return;
+
+        JTextPane area = pestania.getAreaContenido();
+        area.removeAll();
+
+        area.setLayout(new BorderLayout());
+        area.setContentType("text/html");
+        area.setEditable(false);
+
+        String htmlResultados = motorBusqueda.buscar(texto);
+        area.setText(htmlResultados);
+
+        for (javax.swing.event.HyperlinkListener hl : area.getHyperlinkListeners()) {
+            area.removeHyperlinkListener(hl);
+        }
+
+        area.addHyperlinkListener(e -> {
+            if (e.getEventType() == javax.swing.event.HyperlinkEvent.EventType.ACTIVATED) {
+                String urlDestino = e.getDescription();
+                if (urlDestino != null && !urlDestino.isEmpty()) {
+                    abrirUrlEnPestana(urlDestino);
+                }
+            }
+        });
+
+        pestania.setEstado("Resultados de búsqueda");
+        barraEstado.setText(" Resultados para: " + texto);
+        actualizarTituloPestana(pestania, "Resultados: " + texto);
+
+        area.revalidate();
+        area.repaint();
+    }
+
     private void crearBotonFlotanteIA() {
         btnIA = new JButton("✦") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                    RenderingHints.VALUE_ANTIALIAS_ON);
-                
+                g2.setRenderingHint(
+                        RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON);
+
                 g2.setColor(new Color(0, 120, 255));
                 g2.fillOval(0, 0, getWidth(), getHeight());
-                    
+
                 FontMetrics fm = g2.getFontMetrics(getFont());
-                    
+
                 int x = (getWidth() - fm.stringWidth("✦")) / 2;
                 int y = (getHeight() + fm.getAscent()) / 2 - 4;
-                    
+
                 g2.setColor(Color.WHITE);
                 g2.drawString("✦", x, y);
+
                 g2.dispose();
             }
         };
@@ -1503,10 +1984,11 @@ public class Ventana extends JFrame {
         btnIA.setOpaque(false);
 
         btnIA.setFont(new Font("Segoe UI Symbol", Font.BOLD, 28));
-        btnIA.setBounds(getWidth() - 100, getHeight() - 140, 65, 65);
-                
+
+        actualizarPosicionBotonIA();
+
         final Point[] click = new Point[1];
-                
+
         btnIA.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -1517,10 +1999,18 @@ public class Ventana extends JFrame {
             @Override
             public void mouseDragged(MouseEvent e) {
                 int x = btnIA.getX() + e.getX() - click[0].x;
-                int y = btnIA.getY() + e.getY() - click[0].y;                        
+                int y = btnIA.getY() + e.getY() - click[0].y;
                 btnIA.setLocation(x, y);
             }
         });
+
+        this.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                actualizarPosicionBotonIA();
+            }
+        });
+
         btnIA.addActionListener(e -> abrirAsistenteIA());
         getLayeredPane().add(btnIA, JLayeredPane.DRAG_LAYER);
         getLayeredPane().revalidate();
@@ -1531,81 +2021,234 @@ public class Ventana extends JFrame {
         if (dialogoIA != null && dialogoIA.isShowing()) {
             dialogoIA.dispose();
         }
-        dialogoIA = new JDialog(this, "Gemini", false);
-        dialogoIA.setSize(500, 400);
+
+        dialogoIA = new JDialog(this, "Asistente Inteligente - Las Recursivas", false);
+        dialogoIA.setSize(450, 500);
         dialogoIA.setLocationRelativeTo(this);
         dialogoIA.setLayout(new BorderLayout());
+
         JTextArea areaChat = new JTextArea();
         areaChat.setEditable(false);
-                
+        areaChat.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        areaChat.setLineWrap(true);
+        areaChat.setWrapStyleWord(true);
+        areaChat.setMargin(new Insets(10, 10, 10, 10));
+
         JScrollPane scroll = new JScrollPane(areaChat);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
+
         JTextField campoPregunta = new JTextField();
-        JButton btnEnviar = new JButton("Enviar");        
-        JPanel panelInferior = new JPanel(new BorderLayout());
-                
+        campoPregunta.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        campoPregunta.setPreferredSize(new Dimension(300, 36));
+
+        JButton btnEnviar = new JButton("Enviar");
+        btnEnviar.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnEnviar.setPreferredSize(new Dimension(90, 36));
+        btnEnviar.setFocusPainted(false);
+        btnEnviar.setBorderPainted(false);
+        btnEnviar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        boolean oscuro = (menu != null && menu.isModoOscuro());
+        Color fondoComponentes = oscuro ? new Color(40, 40, 42) : Color.WHITE;
+        Color fondoVentana = oscuro ? new Color(22, 22, 24) : new Color(255, 240, 243);
+        Color colorTexto = oscuro ? Color.WHITE : new Color(74, 20, 32);
+        Color colorBoton = oscuro ? new Color(92, 28, 41) : new Color(255, 218, 224);
+
+        areaChat.setBackground(fondoVentana);
+        areaChat.setForeground(colorTexto);
+
+        campoPregunta.setBackground(fondoComponentes);
+        campoPregunta.setForeground(colorTexto);
+        campoPregunta.setCaretColor(colorTexto);
+        campoPregunta.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(oscuro ? new Color(92, 28, 41) : Color.LIGHT_GRAY, 1),
+                BorderFactory.createEmptyBorder(0, 8, 0, 8)
+        ));
+
+        btnEnviar.setBackground(colorBoton);
+        btnEnviar.setForeground(colorTexto);
+
+        btnEnviar.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                btnEnviar.setBackground(oscuro ? new Color(139, 58, 71) : new Color(250, 200, 208));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                btnEnviar.setBackground(colorBoton);
+            }
+        });
+
+        JPanel panelInferior = new JPanel(new BorderLayout(8, 0));
+        panelInferior.setBackground(fondoVentana);
+        panelInferior.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         panelInferior.add(campoPregunta, BorderLayout.CENTER);
         panelInferior.add(btnEnviar, BorderLayout.EAST);
-                
+
         dialogoIA.add(scroll, BorderLayout.CENTER);
         dialogoIA.add(panelInferior, BorderLayout.SOUTH);
-                
+
+        areaChat.append("Gemini: ¡Hola! Soy tu asistente de IA. ¿En qué puedo ayudarte hoy?\n\n");
+
         btnEnviar.addActionListener(e -> {
             String pregunta = campoPregunta.getText().trim();
+
             if (pregunta.isEmpty()) {
                 return;
-            }        
+            }
+
             areaChat.append("Tú: " + pregunta + "\n\n");
             campoPregunta.setText("");
+
+            areaChat.append("Gemini está pensando...\n");
+            areaChat.setCaretPosition(areaChat.getDocument().getLength());
+
             Component compActual = pestanas.getSelectedComponent();
             if (!(compActual instanceof Pestania)) {
                 return;
             }
             Pestania pestaniaActual = (Pestania) compActual;
-            SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {   
+
+            SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
                 @Override
-                protected String doInBackground() throws Exception {        
+                protected String doInBackground() throws Exception {
                     Gemini gemini = new Gemini();
                     return gemini.preguntar(pregunta);
                 }
+
                 @Override
                 protected void done() {
                     try {
                         String respuesta = get();
+
+                        String textoActual = areaChat.getText();
+                        if (textoActual.endsWith("Gemini está pensando...\n")) {
+                            areaChat.setText(textoActual.substring(0, textoActual.lastIndexOf("Gemini está pensando...\n")));
+                        }
+
                         areaChat.append("Gemini: " + respuesta + "\n\n");
-                        String html ="<html><body style='font-family:Arial;'>" + respuesta.replace("\n", "<br>") + "</body></html>";                
+                        areaChat.setCaretPosition(areaChat.getDocument().getLength());
+
+                        String html = "<html><body style='font-family:Segoe UI, Arial; padding:15px; background-color:#FFF0F3; color:#4A1420;'>"
+                                + "<h2>✦ Respuesta del Asistente IA</h2>"
+                                + "<p>" + respuesta.replace("\n", "<br>") + "</p>"
+                                + "</body></html>";
+
+                        pestaniaActual.getAreaContenido().removeAll();
+                        pestaniaActual.getAreaContenido().setLayout(new BorderLayout());
                         pestaniaActual.getAreaContenido().setContentType("text/html");
                         pestaniaActual.getAreaContenido().setText(html);
+
+                        pestaniaActual.setEstado("Respuesta de IA");
+                        barraEstado.setText(" Respuesta de IA desplegada.");
+                        actualizarTituloPestana(pestaniaActual, "IA: " + (pregunta.length() > 12 ? pregunta.substring(0, 12) + "..." : pregunta));
+
                     } catch (Exception ex) {
-                        areaChat.append("Error: " + ex.getMessage() + "\n\n");
+                        String textoActual = areaChat.getText();
+                        if (textoActual.endsWith("Gemini está pensando...\n")) {
+                            areaChat.setText(textoActual.substring(0, textoActual.lastIndexOf("Gemini está pensando...\n")));
+                        }
+                        areaChat.append("Error al obtener respuesta: " + ex.getMessage() + "\n\n");
                     }
                 }
             };
             worker.execute();
         });
+
         campoPregunta.addActionListener(e -> btnEnviar.doClick());
+
         dialogoIA.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
         dialogoIA.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                int opcion = JOptionPane.showConfirmDialog(dialogoIA,
-                    "¿Deseas cerrar el asistente IA?", "Confirmar cierre",
-                    JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                int opcion = mostrarConfirmacionRosada(
+                        dialogoIA,
+                        "¿Deseas cerrar el asistente IA?",
+                        "Confirmar cierre"
+                );
                 if (opcion == JOptionPane.YES_OPTION) {
                     dialogoIA.dispose();
                 }
             }
         });
+
         dialogoIA.setVisible(true);
     }
 
-    private void actualizarBotonesNavegacion() {
-        Component comp = pestanas.getSelectedComponent();
-        if (comp instanceof Pestania p) {
-            btnAtras.setEnabled(p.puedeAtras());
-            btnAdelante.setEnabled(p.puedeAdelante());
-        } else {
-            btnAtras.setEnabled(false);
-            btnAdelante.setEnabled(false);
+    private void actualizarPosicionBotonIA() {
+        if (btnIA != null) {
+            int margenDerecho = 100;
+            int margenInferior = 140;
+            int anchoBoton = 65;
+            int altoBoton = 65;
+
+            btnIA.setBounds(
+                    getWidth() - margenDerecho,
+                    getHeight() - margenInferior,
+                    anchoBoton,
+                    altoBoton
+            );
         }
     }
+
+    private Icon crearIconoCirculo(Color color) {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(color);
+                g2.fillOval(x, y, getIconWidth(), getIconHeight());
+                g2.dispose();
+            }
+
+            @Override
+            public int getIconWidth() { return 10; }
+
+            @Override
+            public int getIconHeight() { return 10; }
+        };
+    }
+
+    private int mostrarConfirmacionRosada(Component padre, String mensaje, String titulo) {
+
+        Color fondoRosa = new Color(255, 240, 243);
+        Color textoVino = new Color(74, 20, 32);
+        Color fondoBoton = new Color(255, 218, 224);
+
+        JLabel lblMensaje = new JLabel(mensaje);
+        lblMensaje.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        lblMensaje.setForeground(textoVino);
+
+        JPanel panelContenido = new JPanel(new BorderLayout());
+        panelContenido.setBackground(fondoRosa);
+        panelContenido.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        panelContenido.add(lblMensaje, BorderLayout.CENTER);
+
+        Object[] opciones = {"Sí", "No"};
+
+        UIManager.put("OptionPane.background", fondoRosa);
+        UIManager.put("Panel.background", fondoRosa);
+        UIManager.put("Button.background", fondoBoton);
+        UIManager.put("Button.foreground", textoVino);
+        UIManager.put("Button.font", new Font("Segoe UI", Font.BOLD, 12));
+        UIManager.put("Button.border", BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(230, 180, 190), 1, true),
+                BorderFactory.createEmptyBorder(4, 12, 4, 12)
+        ));
+
+        int seleccion = JOptionPane.showOptionDialog(
+                padre,
+                panelContenido,
+                titulo,
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                opciones,
+                opciones[0]
+        );
+
+        return seleccion;
+    }
 }
+
