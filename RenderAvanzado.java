@@ -9,7 +9,7 @@ import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
 public class RenderAvanzado {
-    
+
     public void procesarEtiqueta(JTextPane areaTexto, String tag) {
         if (tag == null || tag.trim().isEmpty()) {
             return;
@@ -97,7 +97,7 @@ public class RenderAvanzado {
         if (t.matches("(?is)<link[^>]*>")) return "";
 
         if (t.matches("(?is)<div[^>]*>")) return "\n";
-        if (t.matches("(?is)</div>")) return "\n";
+        if (t.matches("(?is)</div>")) return "";
 
         if (t.matches("(?is)<span[^>]*>")) return "";
         if (t.matches("(?is)</span>")) return "";
@@ -111,42 +111,27 @@ public class RenderAvanzado {
         if (t.matches("(?is)<nav[^>]*>")) return "\n[NAVEGACIÓN]\n";
         if (t.matches("(?is)</nav>")) return "\n";
 
-        if (t.matches("(?is)<section[^>]*>")) return "\n[SECCIÓN]\n";
-        if (t.matches("(?is)</section>")) return "\n";
+        if (t.matches("(?is)<table[^>]*>")) return "\n┌─────── TABLA ───────┐";
+        if (t.matches("(?is)</table>")) return "\n└─────────────────────┘\n";
 
-        if (t.matches("(?is)<article[^>]*>")) return "\n[ARTÍCULO]\n";
-        if (t.matches("(?is)</article>")) return "\n";
+        if (t.matches("(?is)<tr[^>]*>")) return "\n  ";
+        if (t.matches("(?is)</tr>")) return "";
 
-        if (t.matches("(?is)<aside[^>]*>")) return "\n[CONTENIDO SECUNDARIO]\n";
-        if (t.matches("(?is)</aside>")) return "\n";
+        if (t.matches("(?is)<th[^>]*>")) return " │ ";
+        if (t.matches("(?is)</th>")) return "";
 
-        if (t.matches("(?is)<figure[^>]*>")) return "\n[FIGURA]\n";
-        if (t.matches("(?is)</figure>")) return "\n";
+        if (t.matches("(?is)<td[^>]*>")) return " [ ";
+        if (t.matches("(?is)</td>")) return " ]";
 
-        if (t.matches("(?is)<figcaption[^>]*>")) return "\nLeyenda: ";
-        if (t.matches("(?is)</figcaption>")) return "\n";
-
-        if (t.matches("(?is)<table[^>]*>")) return "\n┌──────── TABLA ────────┐\n";
-        if (t.matches("(?is)</table>")) return "\n└───────────────────────┘\n";
-
-        if (t.matches("(?is)<tr[^>]*>")) return "\n";
-        if (t.matches("(?is)</tr>")) return "\n";
-
-        if (t.matches("(?is)<th[^>]*>")) return " | ";
-        if (t.matches("(?is)</th>")) return " | ";
-
-        if (t.matches("(?is)<td[^>]*>")) return " | ";
-        if (t.matches("(?is)</td>")) return " | ";
-
-        if (t.matches("(?is)<form[^>]*>")) return "\n┌──── FORMULARIO ────┐\n";
+        if (t.matches("(?is)<form[^>]*>")) return "\n┌──── FORMULARIO ────┐";
         if (t.matches("(?is)</form>")) return "\n└────────────────────┘\n";
 
-        if (t.matches("(?is)<label[^>]*>")) return "\n";
+        if (t.matches("(?is)<label[^>]*>")) return "\n  ";
         if (t.matches("(?is)</label>")) return " ";
 
         if (t.matches("(?is)<input[^>]*>")) return interpretarInput(tag);
 
-        if (t.matches("(?is)<button[^>]*>")) return "\n[Botón: ";
+        if (t.matches("(?is)<button[^>]*>")) return "\n  [";
         if (t.matches("(?is)</button>")) return "]\n";
 
         if (t.matches("(?is)<select[^>]*>")) return "\n[Lista desplegable]\n";
