@@ -16,6 +16,7 @@ public class BarraNavegacion extends JPanel {
     private JPopupMenu menuOpcionesPopup;
     private JButton botonAtras;
     private JButton botonAdelante;
+    private JButton botonBuscar;
 
     private boolean modoOscuro = false;
 
@@ -26,38 +27,45 @@ public class BarraNavegacion extends JPanel {
     private AccionModo accionModo;
     private AccionAtras accionAtras;
     private AccionAdelante accionAdelante;
+    private AccionMotorBusqueda accionMotorBusqueda;
 
     public BarraNavegacion() {
         setLayout(new FlowLayout(FlowLayout.CENTER));
 
         campoURL = new JTextField(40);
         campoURL.setPreferredSize(new Dimension(500, 28));
-
-        botonAtras = new JButton("←");
-        botonAdelante = new JButton("→");
+        campoURL.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.BLACK, 1),
+                BorderFactory.createEmptyBorder(0, 5, 0, 5)
+        ));
+        botonAtras = new JButton("‹");
+        botonAdelante = new JButton("›");
         botonRecargar = new JButton("↻");
         botonFavorito = new JButton("☆");
         botonIr = new JButton("Ir");
         botonVerFavoritos = new JButton("Favoritos");
-        botonOpciones = new JButton("...");
+        botonOpciones = new JButton("Opciones");
         botonModo = new JButton ("Modo Offline");
+        botonBuscar = new JButton("Buscar");
 
         botonIr.setEnabled(false);
 
         menuOpcionesPopup = new JPopupMenu();
 
-        configurarBotonIcono(botonAtras);
-        configurarBotonIcono(botonAdelante);
-
-        botonAtras.setEnabled(false);
-        botonAdelante.setEnabled(false);
-
         configurarBotonIcono(botonRecargar);
         configurarBotonIcono(botonFavorito);
 
+        Dimension tamBotonTexto = new Dimension(95, 28);
         configurarBotonTexto(botonIr, new Dimension(45, 28));
-        configurarBotonTexto(botonVerFavoritos, new Dimension(90, 28));
-        configurarBotonTexto(botonOpciones, new Dimension(110, 28));
+        configurarBotonTexto(botonVerFavoritos, tamBotonTexto);
+        configurarBotonTexto(botonOpciones, tamBotonTexto);
+        configurarBotonTexto(botonBuscar, new Dimension(80, 28));
+        configurarBotonTexto(botonModo, tamBotonTexto);
+        configurarBotonFlecha(botonAtras);
+        configurarBotonFlecha(botonAdelante);
+
+        botonAtras.setEnabled(false);
+        botonAdelante.setEnabled(false);
 
         configurarEventos();
         configurarHoverBotones();
@@ -70,6 +78,7 @@ public class BarraNavegacion extends JPanel {
         add(botonIr);
         add(botonVerFavoritos);
         add(botonOpciones);
+        add(botonBuscar);
         add(botonModo);
 
         aplicarTema(false);
@@ -88,6 +97,21 @@ public class BarraNavegacion extends JPanel {
         boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
 
+    private void configurarBotonFlecha(JButton boton) {
+        boton.setFocusPainted(false);
+        boton.setBorderPainted(false);
+        boton.setContentAreaFilled(false);
+        boton.setOpaque(false);
+        boton.setPreferredSize(new Dimension(46, 30));
+
+        boton.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 22));
+
+        boton.setMargin(new Insets(-4, 0, 0, 0));
+        boton.setHorizontalAlignment(SwingConstants.CENTER);
+        boton.setVerticalAlignment(SwingConstants.CENTER);
+        boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    }
+
     private void configurarBotonTexto(JButton boton, Dimension tamano) {
         boton.setFocusPainted(false);
         boton.setBorderPainted(false);
@@ -99,15 +123,14 @@ public class BarraNavegacion extends JPanel {
 
     private void configurarEventos() {
         campoURL.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
             public void insertUpdate(DocumentEvent e) {
                 validarCampoVacio();
             }
-            @Override
+
             public void removeUpdate(DocumentEvent e) {
                 validarCampoVacio();
             }
-            @Override
+
             public void changedUpdate(DocumentEvent e) {
                 validarCampoVacio();
             }
@@ -151,31 +174,43 @@ public class BarraNavegacion extends JPanel {
                 accionAdelante.alAdelante();
             }
         });
+
+        botonBuscar.addActionListener(e -> {
+            if (accionMotorBusqueda != null) {
+                accionMotorBusqueda.alAbrirMotorBusqueda();
+            }
+        });
     }
 
     private void configurarHoverBotones() {
         JButton[] botones = {
-            botonIr,
-            botonRecargar,
-            botonFavorito,
-            botonVerFavoritos,
-            botonOpciones,
-            botonModo,
-            botonAtras,
-            botonAdelante
+                botonIr,
+                botonRecargar,
+                botonFavorito,
+                botonVerFavoritos,
+                botonOpciones,
+                botonModo,
+                botonAtras,
+                botonAdelante,
+                botonBuscar
         };
 
         for (JButton b : botones) {
             b.addMouseListener(new MouseAdapter() {
-                @Override
                 public void mouseEntered(MouseEvent e) {
-                    b.setOpaque(true);
-                    b.setContentAreaFilled(true);
-                    b.setBackground(new Color(180, 215, 255));
-                    b.setForeground(Color.BLACK);
+                    if (b == botonAtras || b == botonAdelante || b == botonRecargar || b == botonFavorito) {
+                        b.setOpaque(false);
+                        b.setContentAreaFilled(false);
+                        b.setForeground(new Color(139, 58, 71));
+                    } else {
+                        b.setOpaque(true);
+                        b.setContentAreaFilled(true);
+                        b.setBackground(new Color(180, 215, 255));
+                        b.setForeground(Color.BLACK);
+                    }
                     b.repaint();
                 }
-                @Override
+
                 public void mouseExited(MouseEvent e) {
                     aplicarTemaBoton(b);
                     b.repaint();
@@ -189,16 +224,16 @@ public class BarraNavegacion extends JPanel {
         Color fondoBoton;
 
         if (modoOscuro) {
-            texto = Color.WHITE;
-            fondoBoton = new Color(90, 90, 90);
+            texto = new Color(255, 230, 235);
+            fondoBoton = new Color(92, 28, 41);
         } else {
-            texto = Color.BLACK;
-            fondoBoton = Color.WHITE;
+            texto = new Color(74, 20, 32);
+            fondoBoton =  new Color(255, 218, 224);
         }
 
         boton.setForeground(texto);
 
-        if (boton == botonRecargar || boton == botonFavorito) {
+        if (boton == botonRecargar || boton == botonFavorito || boton == botonAtras || boton == botonAdelante) {
             boton.setOpaque(false);
             boton.setContentAreaFilled(false);
         } else {
@@ -209,21 +244,20 @@ public class BarraNavegacion extends JPanel {
     }
 
     private void validarCampoVacio() {
-        String texto = campoURL.getText().trim();
-        botonIr.setEnabled(!texto.isEmpty());
-        
-        if (texto.matches("^((25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})\\.){3}(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})(:[0-9]{1,5})?$")) {
-            campoURL.setToolTipText("Dirección IP detectada");
-        } else if (texto.matches("^(www\\.)?[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)+(:[0-9]{1,5})?$")) {
-            campoURL.setToolTipText("Dominio detectado");
-        } else {
-            campoURL.setToolTipText(null);
-        }
+        botonIr.setEnabled(!campoURL.getText().trim().isEmpty());
     }
-    
+
     private void ejecutarNavegacion() {
         if (accionNavegacion != null && !getURL().isEmpty()) {
-            accionNavegacion.alNavegar(getURL());
+            String urlIngresada = getURL();
+
+            if (!urlIngresada.startsWith("http://") && !urlIngresada.startsWith("https://") && !urlIngresada.startsWith("file:///")) {
+                if (urlIngresada.contains("/") || urlIngresada.contains("\\") || urlIngresada.toLowerCase().endsWith(".html")) {
+                    urlIngresada = "file:///" + urlIngresada.replace("\\", "/");
+                }
+            }
+
+            accionNavegacion.alNavegar(urlIngresada);
         }
     }
 
@@ -245,21 +279,30 @@ public class BarraNavegacion extends JPanel {
 
     public void aplicarTema(boolean modoOscuro) {
         this.modoOscuro = modoOscuro;
+
         Color fondo;
+        Color colorBorde;
 
         if (modoOscuro) {
             fondo = new Color(60, 60, 60);
+            colorBorde = new Color(92, 28, 41);
             campoURL.setBackground(new Color(80, 80, 80));
             campoURL.setForeground(Color.WHITE);
             campoURL.setCaretColor(Color.WHITE);
         } else {
-            fondo = new Color(240, 240, 240);
+            fondo = new Color(230, 168, 184);
+            colorBorde = Color.BLACK;
             campoURL.setBackground(Color.WHITE);
             campoURL.setForeground(Color.BLACK);
             campoURL.setCaretColor(Color.BLACK);
         }
 
         setBackground(fondo);
+
+        campoURL.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(colorBorde, 1),
+                BorderFactory.createEmptyBorder(0, 5, 0, 5)
+        ));
 
         aplicarTemaBoton(botonIr);
         aplicarTemaBoton(botonRecargar);
@@ -269,6 +312,7 @@ public class BarraNavegacion extends JPanel {
         aplicarTemaBoton(botonModo);
         aplicarTemaBoton(botonAdelante);
         aplicarTemaBoton(botonAtras);
+        aplicarTemaBoton(botonBuscar);
     }
 
     public boolean esURLLocalValida() {
@@ -304,17 +348,25 @@ public class BarraNavegacion extends JPanel {
         this.accionAdelante = accionAdelante;
     }
 
+    public void setAccionMotorBusqueda(AccionMotorBusqueda accionMotorBusqueda) {
+        this.accionMotorBusqueda = accionMotorBusqueda;
+    }
+
     public void configurarMenuOpciones(MenuSimple menu) {
         menuOpcionesPopup.removeAll();
+
         JMenu menuOriginal = menu.getMenuOpciones();
 
         for (int i = 0; i < menuOriginal.getItemCount(); i++) {
             JMenuItem item = menuOriginal.getItem(i);
+
             if (item != null) {
                 JMenuItem copia = new JMenuItem(item.getText());
+
                 for (ActionListener al : item.getActionListeners()) {
                     copia.addActionListener(al);
                 }
+
                 menuOpcionesPopup.add(copia);
             } else {
                 menuOpcionesPopup.addSeparator();
@@ -322,7 +374,11 @@ public class BarraNavegacion extends JPanel {
         }
 
         botonOpciones.addActionListener(e -> {
-            menuOpcionesPopup.show(botonOpciones, 0, botonOpciones.getHeight());
+            menuOpcionesPopup.show(
+                    botonOpciones,
+                    0,
+                    botonOpciones.getHeight()
+            );
         });
     }
 
@@ -353,15 +409,44 @@ public class BarraNavegacion extends JPanel {
         void alAdelante();
     }
 
-    public void setTextoModo(boolean modoOffline) {
-        if (modoOffline) {
-            botonModo.setText("Modo Online");
+    public void setTextoModo(boolean offline) {
+        if (offline) {
+            botonModo.setText(" Offline");
+            botonModo.setIcon(crearIconoCirculo(Color.RED));
         } else {
-            botonModo.setText("Modo Offline");
+            botonModo.setText(" Online");
+            botonModo.setIcon(crearIconoCirculo(new Color(34, 139, 34)));
         }
+        botonModo.setHorizontalTextPosition(SwingConstants.RIGHT);
     }
 
-    public void actualizarBotonesHistorial(boolean puedeAtras, boolean puedeAdelante) {
+    private Icon crearIconoCirculo(Color color) {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(color);
+                g2.fillOval(x, y, getIconWidth(), getIconHeight());
+                g2.dispose();
+            }
+
+            @Override
+            public int getIconWidth() { return 10; }
+
+            @Override
+            public int getIconHeight() { return 10; }
+        };
+    }
+
+    public interface AccionMotorBusqueda {
+        void alAbrirMotorBusqueda();
+    }
+
+    public void actualizarBotonesHistorial(
+            boolean puedeAtras,
+            boolean puedeAdelante) {
+
         botonAtras.setEnabled(puedeAtras);
         botonAdelante.setEnabled(puedeAdelante);
     }
