@@ -2129,19 +2129,8 @@ public class Ventana extends JFrame {
                         areaChat.append("Gemini: " + respuesta + "\n\n");
                         areaChat.setCaretPosition(areaChat.getDocument().getLength());
 
-                        String html = "<html><body style='font-family:Segoe UI, Arial; padding:15px; background-color:#FFF0F3; color:#4A1420;'>"
-                                + "<h2>✦ Respuesta del Asistente IA</h2>"
-                                + "<p>" + respuesta.replace("\n", "<br>") + "</p>"
-                                + "</body></html>";
 
-                        pestaniaActual.getAreaContenido().removeAll();
-                        pestaniaActual.getAreaContenido().setLayout(new BorderLayout());
-                        pestaniaActual.getAreaContenido().setContentType("text/html");
-                        pestaniaActual.getAreaContenido().setText(html);
-
-                        pestaniaActual.setEstado("Respuesta de IA");
-                        barraEstado.setText(" Respuesta de IA desplegada.");
-                        actualizarTituloPestana(pestaniaActual, "IA: " + (pregunta.length() > 12 ? pregunta.substring(0, 12) + "..." : pregunta));
+                        barraEstado.setText(" Respuesta de IA recibida.");
 
                     } catch (Exception ex) {
                         String textoActual = areaChat.getText();
@@ -2174,7 +2163,6 @@ public class Ventana extends JFrame {
 
         dialogoIA.setVisible(true);
     }
-
     private void actualizarPosicionBotonIA() {
         if (btnIA != null) {
             int margenDerecho = 100;
