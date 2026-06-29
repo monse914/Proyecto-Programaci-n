@@ -114,7 +114,6 @@ public class Pestania extends JPanel {
             barraNavegacion.setAccionRecargar(null);
             barraNavegacion.setAccionFavorito(null);
             barraNavegacion.setAccionMostrarFavoritos(null);
-            barraNavegacion.setAccionModo(null);
             barraNavegacion.setURL("");
             barraNavegacion.setAccionAtras(null);
             barraNavegacion.setAccionAdelante(null);
