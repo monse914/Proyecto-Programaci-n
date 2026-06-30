@@ -12,6 +12,7 @@ public class Pestania extends JPanel {
     private int indice = -1;
     private String estado = "";
     private String historialIA = "";
+    private NavegaAvanzada controlNavegacion = new NavegaAvanzada();
 
     public Pestania() {
         setLayout(new BorderLayout());
@@ -114,6 +115,7 @@ public class Pestania extends JPanel {
             barraNavegacion.setAccionRecargar(null);
             barraNavegacion.setAccionFavorito(null);
             barraNavegacion.setAccionMostrarFavoritos(null);
+            barraNavegacion.setAccionModo(null);
             barraNavegacion.setURL("");
             barraNavegacion.setAccionAtras(null);
             barraNavegacion.setAccionAdelante(null);
@@ -135,49 +137,25 @@ public class Pestania extends JPanel {
     }
 
     public void navegar(String url) {
-        if (url == null || url.trim().isEmpty()) {
-            return;
-        }
-
-        urlActual = url;
-
-        if (indice >= 0 && historial.get(indice).equals(url)) {
-            return;
-        }
-
-        if (indice < historial.size() - 1) {
-            historial = new ArrayList<>(historial.subList(0, indice + 1));
-        }
-
-        historial.add(url);
-        indice++;
+        if (url == null || url.trim().isEmpty()) return;
+        this.urlActual = url;
+        controlNavegacion.registrarNavegacion(url);
     }
 
     public String atras() {
-        if (indice > 0) {
-            indice--;
-            urlActual = historial.get(indice);
-        }
-
-        return urlActual;
+        String url = controlNavegacion.obtenerAtras();
+        if (url != null) this.urlActual = url;
+        return this.urlActual;
     }
 
     public String adelante() {
-        if (indice < historial.size() - 1) {
-            indice++;
-            urlActual = historial.get(indice);
-        }
-
-        return urlActual;
+        String url = controlNavegacion.obtenerAdelante();
+        if (url != null) this.urlActual = url;
+        return this.urlActual;
     }
 
-    public boolean puedeAtras() {
-        return indice > 0;
-    }
-
-    public boolean puedeAdelante() {
-        return indice < historial.size() - 1;
-    }
+    public boolean puedeAtras() { return controlNavegacion.puedeIrAtras(); }
+    public boolean puedeAdelante() { return controlNavegacion.puedeIrAdelante(); }
 
     public String getHistorialIA() {
         return historialIA;
