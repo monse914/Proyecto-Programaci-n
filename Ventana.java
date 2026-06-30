@@ -40,7 +40,6 @@ public class Ventana extends JFrame {
     private JButton btnIA;
     private Component pestanaBotonMas;
     private JDialog dialogoIA;
-    private SwitchModo switchModo;
 
     private Map<String, Pestania> pestanasPorUrl;
     private Map<Component, JLabel> etiquetasPestanas;
@@ -65,7 +64,7 @@ public class Ventana extends JFrame {
     public Ventana(String urlInicial) {
 
         setUndecorated(true);
-        setSize(900, 600);
+        setSize(800, 600);
         setMinimumSize(new Dimension(400, 300));
         setLayout(new BorderLayout());
         setLocationRelativeTo(null);
@@ -201,10 +200,9 @@ public class Ventana extends JFrame {
         agregarPestana("Inicio", pestaniaInicial, null);
 
         panelEstado = new JPanel(new BorderLayout());
-        panelEstado.setPreferredSize(new Dimension(800, 26));
-        panelEstado.setBorder(BorderFactory.createEmptyBorder(0, 4, 2, 4));
-        
-        barraEstado = new JLabel(" ");
+        panelEstado.setPreferredSize(new Dimension(800, 28));
+
+        barraEstado = new JLabel(" Listo");
         barraEstado.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
         pestanas.addChangeListener(e -> {
             if (dialogoIA != null && dialogoIA.isShowing()) {
@@ -228,17 +226,7 @@ public class Ventana extends JFrame {
         barraProgreso.setStringPainted(false);
         barraProgreso.setVisible(false);
 
-        switchModo = new SwitchModo();
-        switchModo.addActionListener(e -> {
-            Pestania pestaniaActiva = getPestaniaActiva();
-            cambiarModoNavegacion(pestaniaActiva);
-        });
-        JPanel panelIzquierdoEstado = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 2));
-        panelIzquierdoEstado.setOpaque(false);
-        panelIzquierdoEstado.add(switchModo);
-        panelIzquierdoEstado.add(barraEstado);
-        
-        panelEstado.add(panelIzquierdoEstado, BorderLayout.WEST);
+        panelEstado.add(barraEstado, BorderLayout.WEST);
         panelEstado.add(barraProgreso, BorderLayout.EAST);
 
         add(panelEstado, BorderLayout.SOUTH);
@@ -309,6 +297,10 @@ public class Ventana extends JFrame {
             pestania.getBarraNavegacion().configurarMenuOpciones(menu);
         }
 
+        pestania.getBarraNavegacion().setAccionModo(() -> {
+            cambiarModoNavegacion(pestania);
+        });
+
         pestania.getBarraNavegacion().setAccionAtras(() -> {
             String url = pestania.atras();
 
@@ -332,21 +324,7 @@ public class Ventana extends JFrame {
         pestania.getBarraNavegacion().setAccionMotorBusqueda(() -> {
             mostrarMotorBusqueda(pestania);
         });
-
-        pestania.getBarraNavegacion().setAccionAbrirArchivo(() -> {
-            String archivo = navegaOffline.seleccionarArchivoHTML(this);
-            if (archivo == null) return;
-            if (!navegaOffline.esArchivoHTML(archivo)) {
-                JOptionPane.showMessageDialog(this,
-                        "En modo offline solo se permiten archivos HTML.");
-                return;
-            }
-            pestania.getBarraNavegacion().setURL(archivo);
-            navegarEnPestaniaActual(pestania, archivo);
-        });
-        pestania.getBarraNavegacion().setModoOffline(navegaOffline.estaEnModoOffline());
     }
-
 
     private void actualizarBotonesHistorial(Pestania pestania) {
         if (pestania == null) {
@@ -363,18 +341,39 @@ public class Ventana extends JFrame {
         navegaOffline.cambiarModo();
         actualizarTextoBotonesModo();
         actualizarEstadoModo();
+
+        if (navegaOffline.estaEnModoOffline()) {
+            String archivo = navegaOffline.seleccionarArchivoHTML(this);
+
+            if (archivo == null) {
+                return;
+            }
+
+            if (!navegaOffline.esArchivoHTML(archivo)) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "En modo offline solo se permiten archivos HTML."
+                );
+                return;
+            }
+
+            pestania.getBarraNavegacion().setURL(archivo);
+            navegarEnPestaniaActual(pestania, archivo);
+        }
     }
 
     private void actualizarTextoBotonesModo() {
-        boolean esOffline = navegaOffline.estaEnModoOffline();
-        if (switchModo != null) {
-            switchModo.setModoOffline(esOffline);
-        }
         int i = 0;
+        boolean esOffline = navegaOffline.estaEnModoOffline();
+        Icon iconoColor = esOffline ? crearIconoCirculo(Color.RED) : crearIconoCirculo(new Color(34, 139, 34));
+
         while (i < pestanas.getTabCount()) {
             Component comp = pestanas.getComponentAt(i);
+
             if (comp instanceof Pestania) {
-                ((Pestania) comp).getBarraNavegacion().setModoOffline(esOffline);
+                Pestania p = (Pestania) comp;
+
+                p.getBarraNavegacion().setTextoModo(esOffline);
             }
             i++;
         }
@@ -1734,8 +1733,12 @@ public class Ventana extends JFrame {
     }
 
     private void actualizarEstadoModo() {
-        if (switchModo != null) {
-            switchModo.setModoOffline(navegaOffline.estaEnModoOffline());
+        if (navegaOffline.estaEnModoOffline()) {
+            barraEstado.setText(" Modo Offline");
+            barraEstado.setIcon(crearIconoCirculo(Color.RED));
+        } else {
+            barraEstado.setText(" Modo Online");
+            barraEstado.setIcon(crearIconoCirculo(new Color(34, 139, 34))); // Un verde bosque más visible que el Color.GREEN puro
         }
     }
 
@@ -2100,17 +2103,11 @@ public class Ventana extends JFrame {
             areaChat.append("Gemini está pensando...\n");
             areaChat.setCaretPosition(areaChat.getDocument().getLength());
 
-            Component compActual = pestanas.getSelectedComponent();
-            if (!(compActual instanceof Pestania)) {
-                return;
-            }
-            Pestania pestaniaActual = (Pestania) compActual;
-
             SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
                 @Override
                 protected String doInBackground() throws Exception {
-                    Gemini gemini = new Gemini();
-                    return gemini.preguntar(pregunta);
+                    Gemini geminiInstance = new Gemini();
+                    return geminiInstance.preguntar(pregunta);
                 }
 
                 @Override
@@ -2118,23 +2115,18 @@ public class Ventana extends JFrame {
                     try {
                         String respuesta = get();
 
-                        String textoActual = areaChat.getText();
-                        if (textoActual.endsWith("Gemini está pensando...\n")) {
-                            areaChat.setText(textoActual.substring(0, textoActual.lastIndexOf("Gemini está pensando...\n")));
+                        // 1. Limpiamos el aviso de "Gemini está pensando..." del chat
+                        String textoChat = areaChat.getText();
+                        if (textoChat.endsWith("Gemini está pensando...\n")) {
+                            areaChat.setText(textoChat.substring(0, textoChat.lastIndexOf("Gemini está pensando...\n")));
                         }
 
+                        // 2. Mostramos la respuesta del asistente única y exclusivamente en el JTextArea interno
                         areaChat.append("Gemini: " + respuesta + "\n\n");
                         areaChat.setCaretPosition(areaChat.getDocument().getLength());
 
-
-                        barraEstado.setText(" Respuesta de IA recibida.");
-
                     } catch (Exception ex) {
-                        String textoActual = areaChat.getText();
-                        if (textoActual.endsWith("Gemini está pensando...\n")) {
-                            areaChat.setText(textoActual.substring(0, textoActual.lastIndexOf("Gemini está pensando...\n")));
-                        }
-                        areaChat.append("Error al obtener respuesta: " + ex.getMessage() + "\n\n");
+                        areaChat.append("Error: " + ex.getMessage() + "\n\n");
                     }
                 }
             };
@@ -2160,6 +2152,7 @@ public class Ventana extends JFrame {
 
         dialogoIA.setVisible(true);
     }
+
     private void actualizarPosicionBotonIA() {
         if (btnIA != null) {
             int margenDerecho = 100;
@@ -2235,106 +2228,4 @@ public class Ventana extends JFrame {
 
         return seleccion;
     }
-
-    private Pestania getPestaniaActiva() {
-        Component comp = pestanas.getSelectedComponent();
-        if (comp instanceof Pestania) {
-            return (Pestania) comp;
-        }
-        return null;
-    }
-
-    private static class SwitchModo extends JComponent {
-        private boolean offline = false;
-        private boolean animando = false;
-        private float posicion = 0f;
-        private final java.util.List<ActionListener> listeners = new java.util.ArrayList<>();
-
-        private static final int W = 58, H = 20, R = 11;
-        private static final Color ON  = new Color(34, 139, 34);
-        private static final Color OFF = new Color(180, 50, 50);
-
-        SwitchModo() {
-            setPreferredSize(new Dimension(W + 56, H + 2));
-            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            setOpaque(false);
-            addMouseListener(new MouseAdapter() {
-                @Override public void mouseClicked(MouseEvent e) {
-                    toggle();
-                }
-            });
-        }
-
-        private void toggle() {
-            offline = !offline;
-            animarHacia(offline ? 1f : 0f);
-            ActionEvent evt = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "toggle");
-            for (ActionListener l : listeners) l.actionPerformed(evt);
-        }
-
-        private void animarHacia(float destino) {
-            if (animando) return;
-            animando = true;
-            Timer timer = new Timer(16, null);
-            timer.addActionListener(e -> {
-                float delta = destino > 0.5f ? 0.08f : -0.08f;
-                posicion += delta;
-                if ((delta > 0 && posicion >= destino) || (delta < 0 && posicion <= destino)) {
-                    posicion = destino;
-                    animando = false;
-                    ((Timer) e.getSource()).stop();
-                }
-                repaint();
-            });
-            timer.start();
-        }
-
-        void setModoOffline(boolean esOffline) {
-            if (this.offline == esOffline) return;
-            this.offline = esOffline;
-            animarHacia(esOffline ? 1f : 0f);
-        }
-
-        void addActionListener(ActionListener l) { listeners.add(l); }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-            String label = offline ? "Offline" : "Online";
-            g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
-            FontMetrics fm = g2.getFontMetrics();
-            int labelW = Math.max(fm.stringWidth("Offline"), fm.stringWidth("Online"));
-            int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
-            g2.setColor(Color.BLACK);
-            g2.drawString(label, 0, textY);
-
-            int switchX = labelW + 6;
-
-            Color track = blend(ON, OFF, posicion);
-            g2.setColor(track);
-            g2.fillRoundRect(switchX, (getHeight() - H) / 2, W, H, H, H);
-
-            int thumbTravel = W - 2 * R - 4;
-            int thumbX = switchX + 2 + (int)(posicion * thumbTravel);
-            int thumbY = (getHeight() - H) / 2 + 2;
-            g2.setColor(Color.WHITE);
-            g2.fillOval(thumbX, thumbY, H - 4, H - 4);
-
-            g2.dispose();
-        }
-
-        private static Color blend(Color a, Color b, float t) {
-            int r = (int)(a.getRed()   + t * (b.getRed()   - a.getRed()));
-            int gr= (int)(a.getGreen() + t * (b.getGreen() - a.getGreen()));
-            int bl= (int)(a.getBlue()  + t * (b.getBlue()  - a.getBlue()));
-            return new Color(
-                Math.max(0, Math.min(255, r)),
-                Math.max(0, Math.min(255, gr)),
-                Math.max(0, Math.min(255, bl))
-            );
-        }
-    }
 }
-
