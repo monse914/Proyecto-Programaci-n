@@ -12,6 +12,7 @@ public class BarraNavegacion extends JPanel {
     private JButton botonFavorito;
     private JButton botonVerFavoritos;
     private JButton botonOpciones;
+    private JButton botonModo;
     private JPopupMenu menuOpcionesPopup;
     private JButton botonAtras;
     private JButton botonAdelante;
@@ -23,6 +24,7 @@ public class BarraNavegacion extends JPanel {
     private AccionRecargar accionRecargar;
     private AccionFavorito accionFavorito;
     private AccionMostrarFavoritos accionMostrarFavoritos;
+    private AccionModo accionModo;
     private AccionAtras accionAtras;
     private AccionAdelante accionAdelante;
     private AccionMotorBusqueda accionMotorBusqueda;
@@ -43,6 +45,7 @@ public class BarraNavegacion extends JPanel {
         botonIr = new JButton("Ir");
         botonVerFavoritos = new JButton("Favoritos");
         botonOpciones = new JButton("Opciones");
+        botonModo = new JButton ("Modo Offline");
         botonBuscar = new JButton("Buscar");
 
         botonIr.setEnabled(false);
@@ -53,10 +56,11 @@ public class BarraNavegacion extends JPanel {
         configurarBotonIcono(botonFavorito);
 
         Dimension tamBotonTexto = new Dimension(95, 28);
-        configurarBotonTexto(botonIr, new Dimension(55, 28));
+        configurarBotonTexto(botonIr, new Dimension(45, 28));
         configurarBotonTexto(botonVerFavoritos, tamBotonTexto);
         configurarBotonTexto(botonOpciones, tamBotonTexto);
         configurarBotonTexto(botonBuscar, new Dimension(80, 28));
+        configurarBotonTexto(botonModo, tamBotonTexto);
         configurarBotonFlecha(botonAtras);
         configurarBotonFlecha(botonAdelante);
 
@@ -75,6 +79,8 @@ public class BarraNavegacion extends JPanel {
         add(botonVerFavoritos);
         add(botonOpciones);
         add(botonBuscar);
+        add(botonModo);
+
         aplicarTema(false);
     }
 
@@ -151,6 +157,12 @@ public class BarraNavegacion extends JPanel {
             }
         });
 
+        botonModo.addActionListener(e -> {
+            if (accionModo != null) {
+                accionModo.alModo();
+            }
+        });
+
         botonAtras.addActionListener(e -> {
             if (accionAtras != null) {
                 accionAtras.alAtras();
@@ -177,6 +189,7 @@ public class BarraNavegacion extends JPanel {
                 botonFavorito,
                 botonVerFavoritos,
                 botonOpciones,
+                botonModo,
                 botonAtras,
                 botonAdelante,
                 botonBuscar
@@ -296,6 +309,7 @@ public class BarraNavegacion extends JPanel {
         aplicarTemaBoton(botonFavorito);
         aplicarTemaBoton(botonVerFavoritos);
         aplicarTemaBoton(botonOpciones);
+        aplicarTemaBoton(botonModo);
         aplicarTemaBoton(botonAdelante);
         aplicarTemaBoton(botonAtras);
         aplicarTemaBoton(botonBuscar);
@@ -320,6 +334,10 @@ public class BarraNavegacion extends JPanel {
 
     public void setAccionMostrarFavoritos(AccionMostrarFavoritos accionMostrarFavoritos) {
         this.accionMostrarFavoritos = accionMostrarFavoritos;
+    }
+
+    public void setAccionModo(AccionModo accionModo) {
+        this.accionModo = accionModo;
     }
 
     public void setAccionAtras(AccionAtras accionAtras) {
@@ -380,6 +398,9 @@ public class BarraNavegacion extends JPanel {
         void alMostrarFavoritos();
     }
 
+    public interface AccionModo {
+        void alModo();
+    }
     public interface AccionAtras {
         void alAtras();
     }
@@ -388,48 +409,40 @@ public class BarraNavegacion extends JPanel {
         void alAdelante();
     }
 
+    public void setTextoModo(boolean offline) {
+        if (offline) {
+            botonModo.setText(" Offline");
+            botonModo.setIcon(crearIconoCirculo(Color.RED));
+        } else {
+            botonModo.setText(" Online");
+            botonModo.setIcon(crearIconoCirculo(new Color(34, 139, 34)));
+        }
+        botonModo.setHorizontalTextPosition(SwingConstants.RIGHT);
+    }
+
+    private Icon crearIconoCirculo(Color color) {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(color);
+                g2.fillOval(x, y, getIconWidth(), getIconHeight());
+                g2.dispose();
+            }
+
+            @Override
+            public int getIconWidth() { return 10; }
+
+            @Override
+            public int getIconHeight() { return 10; }
+        };
+    }
+
     public interface AccionMotorBusqueda {
         void alAbrirMotorBusqueda();
     }
 
-    public interface AccionAbrirArchivo {
-        void alAbrirArchivo();
-    }
-
-    private ActionListener listenerBotonIrOffline;
-    private AccionAbrirArchivo accionAbrirArchivo;
-
-    public void setAccionAbrirArchivo(AccionAbrirArchivo accion) {
-        this.accionAbrirArchivo = accion;
-    }
-
-    public void setModoOffline(boolean offline) {
-        if (offline) {
-            botonIr.setText("📁");
-            botonIr.setEnabled(true);
-            botonIr.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
-            campoURL.setEnabled(false);
-            if (listenerBotonIrOffline == null) {
-                listenerBotonIrOffline = e -> {
-                    if (accionAbrirArchivo != null) {
-                        accionAbrirArchivo.alAbrirArchivo();
-                    }
-                };
-            }
-            botonIr.addActionListener(listenerBotonIrOffline);
-        } else {
-            botonIr.setText("Ir");
-            botonIr.setFont(UIManager.getFont("Button.font"));
-            campoURL.setEnabled(true);
-            campoURL.setToolTipText(null);
-            validarCampoVacio();
-            if (listenerBotonIrOffline != null) {
-                botonIr.removeActionListener(listenerBotonIrOffline);
-            }
-        }
-        repaint();
-    }
-    
     public void actualizarBotonesHistorial(
             boolean puedeAtras,
             boolean puedeAdelante) {
